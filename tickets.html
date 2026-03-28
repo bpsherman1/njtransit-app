@@ -664,6 +664,13 @@
       if (e.key === 'Escape') { closeOverlay(); closeActivateDialog(); }
     });
   </script>
+  <script>
+    function setAppHeight() {
+      document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+    }
+    window.addEventListener('resize', setAppHeight);
+    setAppHeight();
+  </script>
   <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');</script>
 </body>
 </html>
