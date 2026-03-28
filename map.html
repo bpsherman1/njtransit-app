@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NJ Transit — Live Map</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Map page fills green header + scrollable route */
+    .map-header {
+      background: linear-gradient(160deg, var(--green-900) 0%, var(--green-800) 100%);
+      color: var(--white);
+      padding: 0 var(--sp-6) var(--sp-5);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .map-header::before {
+      content: '';
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .line-selector {
+      display: flex;
+      gap: var(--sp-2);
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 2px 0 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .line-selector::-webkit-scrollbar { display: none; }
+
+    .line-sel-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 38px;
+      padding: 0 14px;
+      border-radius: var(--r-full);
+      border: 2px solid rgba(255,255,255,0.18);
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .line-sel-btn.active {
+      background: var(--gold-500);
+      border-color: var(--gold-500);
+      color: var(--gray-900);
+    }
+
+    .line-color-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Route visualization */
+    .route-container {
+      padding: var(--sp-5) var(--sp-6);
+      position: relative;
+    }
+
+    /* The route line runs behind the stops */
+    .route-track {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Each stop row */
+    .stop-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      position: relative;
+      min-height: 52px;
+    }
+
+    /* Connecting segment between stops */
+    .stop-connector {
+      position: absolute;
+      left: 18px; /* center of dot column */
+      top: 26px;
+      width: 3px;
+      height: 52px;
+      border-radius: 0 0 2px 2px;
+      transform: translateX(-50%);
+      z-index: 1;
+      transition: background 0.3s;
+    }
+
+    .stop-row:last-child .stop-connector { display: none; }
+
+    .stop-col {
+      width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 2;
+    }
+
+    .stop-circle {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--white);
+      border: 3px solid var(--gray-300);
+      transition: all 0.3s;
+      position: relative;
+      z-index: 3;
+    }
+
+    .stop-row.is-major .stop-circle {
+      width: 18px; height: 18px;
+      border-width: 3.5px;
+    }
+
+    .stop-row.passed .stop-circle {
+      background: var(--gray-200);
+      border-color: var(--gray-300);
+    }
+
+    .stop-row.passed .stop-connector { background: var(--gray-200) !important; }
+    .stop-row.passed .stop-name-text { color: var(--gray-400); }
+    .stop-row.passed .stop-eta { color: var(--gray-300); }
+
+    .stop-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stop-name-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-800);
+      transition: color 0.3s;
+    }
+
+    .stop-row.is-major .stop-name-text {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .stop-eta {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      white-space: nowrap;
+      transition: color 0.3s;
+    }
+
+    .stop-eta.actual { color: var(--gray-400); text-decoration: line-through; }
+
+    /* Train position row */
+    .train-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-4);
+      min-height: 44px;
+      position: relative;
+    }
+
+    .train-position-col {
+      width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 5;
+    }
+
+    .train-icon-wrap {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--green-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 2px 12px rgba(26,92,56,0.5);
+    }
+
+    .train-icon-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -7px;
+      border-radius: 50%;
+      background: var(--green-800);
+      opacity: 0.2;
+      animation: pulse-ring 2s ease-out infinite;
+    }
+
+    .train-icon-wrap::after {
+      content: '';
+      position: absolute;
+      inset: -14px;
+      border-radius: 50%;
+      background: var(--green-800);
+      opacity: 0.09;
+      animation: pulse-ring 2s ease-out 0.5s infinite;
+    }
+
+    .train-status-info {
+      flex: 1;
+      background: var(--green-800);
+      color: var(--white);
+      border-radius: var(--r-md);
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .train-status-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .train-status-meta {
+      font-size: 11px;
+      opacity: 0.65;
+      margin-top: 1px;
+      font-weight: 500;
+    }
+
+    /* The connector FROM last passed stop to train icon */
+    .train-connector-above {
+      position: absolute;
+      left: 18px;
+      top: -26px;
+      width: 3px;
+      height: 52px;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    /* The connector FROM train icon to next stop */
+    .train-connector-below {
+      position: absolute;
+      left: 18px;
+      top: 28px;
+      width: 3px;
+      height: 26px;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    /* Status panel at top of route */
+    .route-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--sp-4);
+      background: var(--white);
+      border-radius: var(--r-lg);
+      padding: var(--sp-3) var(--sp-4);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--gray-100);
+    }
+
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.2);
+      animation: live-blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes live-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .terminal-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--cream-50);
+      border-radius: var(--r-sm);
+      padding: 6px 10px;
+      margin-bottom: var(--sp-2);
+    }
+
+    .terminal-chip span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-600);
+    }
+
+    .route-endpoints {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--sp-4);
+      gap: var(--sp-3);
+    }
+
+    .endpoint-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 2px;
+    }
+
+    .endpoint-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      color: var(--gray-900);
+      letter-spacing: 0.3px;
+    }
+
+    .endpoint-arrow {
+      font-size: 20px;
+      color: var(--gray-300);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ────────────────────────────── -->
+    <div class="map-header">
+      <div class="status-bar light" style="padding: 14px 0 0;">
+        <span class="time" id="status-time">9:41</span>
+        <div class="icons">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0" opacity="0.4"/><path d="M1.42 9a16 16 0 0 1 21.16 0" opacity="0.2"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M22 11v3" stroke-linecap="round"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between z-1" style="margin-top: var(--sp-5); margin-bottom: var(--sp-4);">
+        <div>
+          <p style="font-size:11px; font-weight:600; opacity:0.5; letter-spacing:1px; text-transform:uppercase;">Real-time</p>
+          <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:34px; letter-spacing:0.5px; text-transform:uppercase; line-height:1; margin-top:2px;">Live Map</h1>
+        </div>
+        <div class="flex items-center gap-2" style="background:rgba(255,255,255,0.1); border-radius:var(--r-full); padding:6px 12px;">
+          <span class="live-dot"></span>
+          <span style="font-size:12px; font-weight:700; color:var(--white);">Live</span>
+        </div>
+      </div>
+
+      <!-- Line selector -->
+      <div class="line-selector z-1">
+        <button class="line-sel-btn active" onclick="selectLine(this,'montclair')">
+          <span class="line-color-dot" style="background:var(--line-montclair);"></span>
+          Montclair-Boonton
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'ne')">
+          <span class="line-color-dot" style="background:var(--line-northeast);"></span>
+          Northeast Corridor
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'coastal')">
+          <span class="line-color-dot" style="background:var(--line-coastal);"></span>
+          North Jersey Coast
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'morristown')">
+          <span class="line-color-dot" style="background:var(--line-morristown);"></span>
+          Morristown Line
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'gladstone')">
+          <span class="line-color-dot" style="background:var(--line-gladstone);"></span>
+          Gladstone Branch
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'main')">
+          <span class="line-color-dot" style="background:var(--line-main);"></span>
+          Main Line
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'raritan')">
+          <span class="line-color-dot" style="background:var(--line-raritan);"></span>
+          Raritan Valley
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'bergen')">
+          <span class="line-color-dot" style="background:var(--line-bergen);"></span>
+          Bergen County
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'pascack')">
+          <span class="line-color-dot" style="background:var(--line-pascack);"></span>
+          Pascack Valley
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'acl')">
+          <span class="line-color-dot" style="background:var(--line-acl);"></span>
+          Atlantic City Line
+        </button>
+        <button class="line-sel-btn" onclick="selectLine(this,'princeton')">
+          <span class="line-color-dot" style="background:var(--line-princeton);"></span>
+          Princeton Branch
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Scrollable Route ───────────────────── -->
+    <div class="page-content">
+      <div class="px-6 pt-5">
+
+        <!-- Status card -->
+        <div class="route-status-bar mb-4">
+          <div>
+            <p id="map-train-num" style="font-size:13px; font-weight:700; color:var(--gray-900);">Train #3284</p>
+            <p id="map-train-desc" style="font-size:11px; color:var(--gray-500); margin-top:1px; font-weight:500;">Montclair Hts → Hoboken · Express</p>
+          </div>
+          <div class="chip chip-ontime">
+            <span class="dot"></span> On Time
+          </div>
+        </div>
+
+        <!-- Route endpoints banner -->
+        <div class="route-endpoints">
+          <div>
+            <p class="endpoint-label">Origin</p>
+            <p id="map-origin" class="endpoint-name">Hoboken Terminal</p>
+          </div>
+          <span class="endpoint-arrow">→</span>
+          <div style="text-align:right;">
+            <p class="endpoint-label">Terminus</p>
+            <p id="map-terminus" class="endpoint-name">Hackettstown</p>
+          </div>
+        </div>
+
+        <!-- Route visualization (populated by JS) -->
+        <div class="route-track" id="route-track">
+
+          <!-- STOP 1: placeholder — removed -->
+          <div class="stop-row is-major passed" style="display:none;">
+            <div class="stop-connector" style="background: var(--gray-200);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--gray-300); background:var(--gray-200);"></div>
+            </div>
+            <div class="stop-info">
+              <a href="station.html" style="text-decoration:none;">
+                <p class="stop-name-text">Montclair Heights</p>
+                <p class="stop-eta" style="font-size:11px; color:var(--gray-400); font-weight:500;">Departed 8:12 AM</p>
+              </a>
+              <span style="font-size:10px; font-weight:600; color:var(--gray-300); text-transform:uppercase; letter-spacing:0.5px;">Origin</span>
+            </div>
+          </div>
+
+          <!-- STOP 2: Upper Montclair (passed) -->
+          <div class="stop-row passed">
+            <div class="stop-connector" style="background: var(--gray-200);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--gray-300); background:var(--gray-200);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Upper Montclair</p>
+                <p class="stop-eta" style="font-size:11px; color:var(--gray-400); font-weight:500;">Departed 8:15 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 3: Glen Ridge (passed) -->
+          <div class="stop-row passed">
+            <div class="stop-connector" style="background: var(--gray-200);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--gray-300); background:var(--gray-200);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Glen Ridge</p>
+                <p class="stop-eta" style="font-size:11px; color:var(--gray-400); font-weight:500;">Departed 8:18 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 4: Bloomfield (passed) -->
+          <div class="stop-row passed">
+            <div class="stop-connector" style="background: var(--gray-200);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--gray-300); background:var(--gray-200);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Bloomfield</p>
+                <p class="stop-eta" style="font-size:11px; color:var(--gray-400); font-weight:500;">Departed 8:22 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 5: Watsessing (passed) -->
+          <div class="stop-row passed">
+            <div class="stop-connector" style="background: var(--gray-200);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--gray-300); background:var(--gray-200);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Watsessing Ave</p>
+                <p class="stop-eta" style="font-size:11px; color:var(--gray-400); font-weight:500;">Departed 8:26 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── TRAIN MARKER ──────────────────── -->
+          <div class="train-row">
+            <div style="position:absolute; left:18px; top:-26px; width:3px; height:40px; background:linear-gradient(to bottom, var(--gray-200), var(--line-montclair)); transform:translateX(-50%); border-radius:0 0 2px 2px; z-index:2;"></div>
+            <div class="train-position-col">
+              <div class="train-icon-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                  <rect x="4" y="3" width="16" height="16" rx="3"/>
+                  <path d="M4 11h16"/>
+                  <path d="M8 19v2M16 19v2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="train-status-info">
+              <div>
+                <p class="train-status-name">Train #3284</p>
+                <p class="train-status-meta">Between Watsessing & Newark Penn</p>
+              </div>
+              <div style="text-align:right;">
+                <p style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; color:var(--gold-400); line-height:1;">↑ 42</p>
+                <p style="font-size:10px; opacity:0.6; font-weight:500; margin-top:1px;">mph</p>
+              </div>
+            </div>
+            <div style="position:absolute; left:18px; bottom:-14px; width:3px; height:28px; background:var(--line-montclair); transform:translateX(-50%); z-index:2; opacity:0.5;"></div>
+          </div>
+
+          <!-- STOP 6: Newark Penn (upcoming, next stop) -->
+          <div class="stop-row is-major" style="margin-top: 0;">
+            <div class="stop-connector" style="background: var(--line-montclair);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--line-montclair); width:18px; height:18px; border-width:3.5px;"></div>
+            </div>
+            <div class="stop-info">
+              <a href="station.html" style="text-decoration:none;">
+                <p class="stop-name-text" style="color:var(--green-800);">Newark Penn Station</p>
+                <p style="font-size:11px; color:var(--line-montclair); font-weight:700; margin-top:2px;">Arrives in ~4 min · 8:31 AM</p>
+              </a>
+              <div class="chip chip-ontime" style="flex-shrink:0;">
+                <span class="dot"></span> Next
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 7: Secaucus Junction -->
+          <div class="stop-row is-major">
+            <div class="stop-connector" style="background: var(--line-montclair);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--line-montclair);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Secaucus Junction</p>
+                <p class="stop-eta">8:44 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 8: Jersey City -->
+          <div class="stop-row">
+            <div class="stop-connector" style="background: var(--line-montclair);"></div>
+            <div class="stop-col">
+              <div class="stop-circle" style="border-color:var(--line-montclair);"></div>
+            </div>
+            <div class="stop-info">
+              <div>
+                <p class="stop-name-text">Jersey City</p>
+                <p class="stop-eta">8:52 AM</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- STOP 9: Hoboken Terminal (terminus) -->
+          <div class="stop-row is-major">
+            <div class="stop-col">
+              <!-- No connector after terminus -->
+              <div class="stop-circle" style="border-color:var(--line-montclair); width:20px; height:20px; border-width:4px;"></div>
+            </div>
+            <div class="stop-info">
+              <a href="station.html" style="text-decoration:none;">
+                <p class="stop-name-text" style="font-size:15px; font-weight:700;">Hoboken Terminal</p>
+                <p class="stop-eta">9:02 AM · Terminus</p>
+              </a>
+              <span style="font-size:10px; font-weight:700; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.5px;">Final</span>
+            </div>
+          </div>
+
+        </div><!-- /route-track -->
+
+        <!-- Tap hint -->
+        <p style="text-align:center; font-size:12px; color:var(--gray-400); font-weight:500; margin-top:var(--sp-5); padding-bottom:var(--sp-2);">Tap a station name to view details</p>
+
+      </div><!-- /px-6 -->
+    </div><!-- /page-content -->
+
+    <!-- ── Bottom Nav ─────────────────────────── -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="trip.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </a>
+      <a href="tickets.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+        <span>Tickets</span>
+      </a>
+      <a href="map.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span>Map</span>
+      </a>
+      <a href="account.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    (function() {
+      const now = new Date();
+      const h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+      document.getElementById('status-time').textContent = `${h%12||12}:${m}`;
+    })();
+
+    // ── Line Data ────────────────────────────────────────────
+    const LINE_DATA = {
+      montclair: {
+        label: 'Montclair-Boonton', trainNum: '3284',
+        color: 'var(--line-montclair)', trainPos: 6,
+        startMin: 8*60+5, interval: 5,
+        stops: [
+          { name:'Hackettstown', major:true },
+          { name:'Mount Olive', major:false },
+          { name:'Netcong', major:false },
+          { name:'Lake Hopatcong', major:false },
+          { name:'Mount Arlington', major:false },
+          { name:'Dover', major:true },
+          { name:'Denville', major:false },
+          { name:'Boonton', major:true },
+          { name:'Towaco', major:false },
+          { name:'Lincoln Park', major:false },
+          { name:'Mountain View', major:false },
+          { name:'Wayne-Route 23', major:false },
+          { name:'Little Falls', major:false },
+          { name:'Montclair State University', major:true },
+          { name:'Montclair Heights', major:false },
+          { name:'Mountain Avenue', major:false },
+          { name:'Upper Montclair', major:false },
+          { name:'Watchung Avenue', major:false },
+          { name:'Walnut Street', major:false },
+          { name:'Bay Street', major:false },
+          { name:'Glen Ridge', major:false },
+          { name:'Bloomfield', major:false },
+          { name:'Watsessing Avenue', major:false },
+          { name:'Newark Broad Street', major:true },
+          { name:'Hoboken', major:true },
+          { name:'Secaucus Junction', major:true },
+          { name:'New York Penn Station', major:true },
+        ]
+      },
+      ne: {
+        label: 'Northeast Corridor', trainNum: '1147',
+        color: 'var(--line-northeast)', trainPos: 5,
+        startMin: 6*60+45, interval: 5,
+        stops: [
+          { name:'Trenton', major:true },
+          { name:'Hamilton', major:false },
+          { name:'Princeton Junction', major:true },
+          { name:'New Brunswick', major:true },
+          { name:'Edison', major:false },
+          { name:'Metuchen', major:false },
+          { name:'Metropark', major:true },
+          { name:'Rahway', major:true },
+          { name:'Linden', major:false },
+          { name:'Elizabeth', major:true },
+          { name:'North Elizabeth', major:false },
+          { name:'Newark Liberty Airport', major:false },
+          { name:'Newark Penn Station', major:true },
+          { name:'Secaucus Junction', major:true },
+          { name:'New York Penn Station', major:true },
+        ]
+      },
+      coastal: {
+        label: 'North Jersey Coast', trainNum: '4402',
+        color: 'var(--line-coastal)', trainPos: 6,
+        startMin: 7*60+10, interval: 6,
+        stops: [
+          { name:'Bay Head', major:true },
+          { name:'Point Pleasant Beach', major:false },
+          { name:'Manasquan', major:false },
+          { name:'Spring Lake', major:false },
+          { name:'Belmar', major:false },
+          { name:'Bradley Beach', major:false },
+          { name:'Asbury Park', major:true },
+          { name:'Allenhurst', major:false },
+          { name:'Elberon', major:false },
+          { name:'Long Branch', major:true },
+          { name:'Little Silver', major:false },
+          { name:'Red Bank', major:true },
+          { name:'Middletown', major:false },
+          { name:'Hazlet', major:false },
+          { name:'Aberdeen-Matawan', major:true },
+          { name:'South Amboy', major:false },
+          { name:'Perth Amboy', major:false },
+          { name:'Woodbridge', major:false },
+          { name:'Rahway', major:false },
+          { name:'Newark Liberty Airport', major:false },
+          { name:'Newark Penn Station', major:true },
+          { name:'Secaucus Junction', major:true },
+          { name:'New York Penn Station', major:true },
+        ]
+      },
+      morristown: {
+        label: 'Morris & Essex — Morristown', trainNum: '2210',
+        color: 'var(--line-morristown)', trainPos: 6,
+        startMin: 7*60+20, interval: 6,
+        stops: [
+          { name:'Dover', major:true },
+          { name:'Denville', major:false },
+          { name:'Mount Tabor', major:false },
+          { name:'Morris Plains', major:false },
+          { name:'Morristown', major:true },
+          { name:'Convent Station', major:false },
+          { name:'Madison', major:false },
+          { name:'Chatham', major:false },
+          { name:'Summit', major:true },
+          { name:'Short Hills', major:false },
+          { name:'Millburn', major:false },
+          { name:'Maplewood', major:true },
+          { name:'South Orange', major:false },
+          { name:'Highland Avenue', major:false },
+          { name:'Orange', major:false },
+          { name:'Brick Church', major:false },
+          { name:'East Orange', major:false },
+          { name:'Newark Broad Street', major:true },
+          { name:'Hoboken', major:true },
+          { name:'Secaucus Junction', major:true },
+          { name:'New York Penn Station', major:true },
+        ]
+      },
+      gladstone: {
+        label: 'Morris & Essex — Gladstone', trainNum: '2305',
+        color: 'var(--line-gladstone)', trainPos: 5,
+        startMin: 7*60+40, interval: 8,
+        stops: [
+          { name:'Gladstone', major:true },
+          { name:'Peapack', major:false },
+          { name:'Far Hills', major:false },
+          { name:'Bernardsville', major:true },
+          { name:'Basking Ridge', major:false },
+          { name:'Lyons', major:false },
+          { name:'Millington', major:false },
+          { name:'Stirling', major:false },
+          { name:'Gillette', major:false },
+          { name:'Berkeley Heights', major:false },
+          { name:'Murray Hill', major:false },
+          { name:'New Providence', major:false },
+          { name:'Summit', major:true },
+          { name:'Short Hills', major:false },
+          { name:'Millburn', major:false },
+          { name:'Maplewood', major:true },
+          { name:'South Orange', major:false },
+          { name:'Highland Avenue', major:false },
+          { name:'Orange', major:false },
+          { name:'Brick Church', major:false },
+          { name:'East Orange', major:false },
+          { name:'Newark Broad Street', major:true },
+          { name:'Hoboken', major:true },
+          { name:'Secaucus Junction', major:true },
+          { name:'New York Penn Station', major:true },
+        ]
+      },
+      main: {
+        label: 'Main Line', trainNum: '8801',
+        color: 'var(--line-main)', trainPos: 5,
+        startMin: 7*60+55, interval: 5,
+        stops: [
+          { name:'Suffern', major:true },
+          { name:'Mahwah', major:false },
+          { name:'Ramsey Route 17', major:false },
+          { name:'Ramsey', major:false },
+          { name:'Allendale', major:false },
+          { name:'Waldwick', major:false },
+          { name:'Ho-Ho-Kus', major:false },
+          { name:'Ridgewood', major:true },
+          { name:'Glen Rock Main Line', major:false },
+          { name:'Hawthorne', major:false },
+          { name:'Paterson', major:true },
+          { name:'Clifton', major:false },
+          { name:'Passaic', major:false },
+          { name:'Delawanna', major:false },
+          { name:'Lyndhurst', major:false },
+          { name:'Secaucus Junction', major:true },
+          { name:'Hoboken', major:true },
+        ]
+      },
+      raritan: {
+        label: 'Raritan Valley', trainNum: '5512',
+        color: 'var(--line-raritan)', trainPos: 5,
+        startMin: 7*60+30, interval: 7,
+        stops: [
+          { name:'High Bridge', major:true },
+          { name:'Annandale', major:false },
+          { name:'Lebanon', major:false },
+          { name:'White House', major:false },
+          { name:'North Branch', major:false },
+          { name:'Raritan', major:false },
+          { name:'Somerville', major:true },
+          { name:'Bridgewater', major:false },
+          { name:'Bound Brook', major:false },
+          { name:'Dunellen', major:false },
+          { name:'Plainfield', major:true },
+          { name:'Netherwood', major:false },
+          { name:'Fanwood', major:false },
+          { name:'Westfield', major:true },
+          { name:'Cranford', major:false },
+          { name:'Union', major:false },
+          { name:'Roselle Park', major:false },
+          { name:'Newark Broad Street', major:true },
+          { name:'Newark Penn Station', major:true },
+        ]
+      },
+      bergen: {
+        label: 'Bergen County', trainNum: '6628',
+        color: 'var(--line-bergen)', trainPos: 5,
+        startMin: 7*60+50, interval: 6,
+        stops: [
+          { name:'Montvale', major:true },
+          { name:'Park Ridge', major:false },
+          { name:'Woodcliff Lake', major:false },
+          { name:'Hillsdale', major:false },
+          { name:'Westwood', major:true },
+          { name:'Emerson', major:false },
+          { name:'Oradell', major:false },
+          { name:'River Edge', major:false },
+          { name:'New Bridge Landing', major:false },
+          { name:'Bogota', major:false },
+          { name:'Teterboro', major:false },
+          { name:'Essex Street', major:false },
+          { name:'Anderson Street', major:false },
+          { name:'Secaucus Junction', major:true },
+          { name:'Hoboken', major:true },
+        ]
+      },
+      pascack: {
+        label: 'Pascack Valley', trainNum: '7714',
+        color: 'var(--line-pascack)', trainPos: 5,
+        startMin: 8*60+5, interval: 8,
+        stops: [
+          { name:'Spring Valley', major:true },
+          { name:'Nanuet', major:false },
+          { name:'Pearl River', major:false },
+          { name:'Montvale', major:false },
+          { name:'Park Ridge', major:false },
+          { name:'Woodcliff Lake', major:false },
+          { name:'Hillsdale', major:false },
+          { name:'Westwood', major:true },
+          { name:'Emerson', major:false },
+          { name:'Oradell', major:false },
+          { name:'River Edge', major:false },
+          { name:'New Bridge Landing', major:false },
+          { name:'Bogota', major:false },
+          { name:'Teterboro', major:false },
+          { name:'Essex Street', major:false },
+          { name:'Anderson Street', major:false },
+          { name:'Wood-Ridge', major:false },
+          { name:'Secaucus Junction', major:true },
+          { name:'Hoboken', major:true },
+        ]
+      },
+      acl: {
+        label: 'Atlantic City Line', trainNum: '9901',
+        color: 'var(--line-acl)', trainPos: 3,
+        startMin: 8*60+20, interval: 9,
+        stops: [
+          { name:'Atlantic City', major:true },
+          { name:'Absecon', major:false },
+          { name:'Egg Harbor City', major:false },
+          { name:'Hammonton', major:false },
+          { name:'Atco', major:false },
+          { name:'Lindenwold', major:true },
+          { name:'Cherry Hill', major:false },
+          { name:'Pennsauken Transit Center', major:false },
+          { name:'Philadelphia 30th Street', major:true },
+        ]
+      },
+      princeton: {
+        label: 'Princeton Branch', trainNum: '601',
+        color: 'var(--line-princeton)', trainPos: 1,
+        startMin: 8*60+0, interval: 4,
+        stops: [
+          { name:'Princeton', major:true },
+          { name:'Princeton Junction', major:true },
+        ]
+      },
+    };
+
+    function minsToTime(m) {
+      const h = Math.floor(m/60)%24, min = m%60;
+      return `${h%12||12}:${String(min).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+    }
+
+    function renderRoute(lineKey) {
+      const d = LINE_DATA[lineKey];
+      if (!d) return;
+
+      // Update status card & endpoints
+      document.getElementById('map-train-num').textContent = `Train #${d.trainNum}`;
+      document.getElementById('map-train-desc').textContent =
+        `${d.stops[0].name.split(' ')[0]} → ${d.stops[d.stops.length-1].name.split(' ')[0]} · ${d.label}`;
+      document.getElementById('map-origin').textContent = d.stops[0].name;
+      document.getElementById('map-terminus').textContent = d.stops[d.stops.length-1].name;
+
+      const track = document.getElementById('route-track');
+      let html = '';
+
+      d.stops.forEach((stop, i) => {
+        const time = minsToTime(d.startMin + i * d.interval);
+        const isFirst = i === 0;
+        const isLast  = i === d.stops.length - 1;
+        const isPassed = i < d.trainPos;
+        const isNext  = i === d.trainPos;
+        const majorClass = stop.major ? ' is-major' : '';
+
+        // Train marker between last passed and next stop
+        if (i === d.trainPos) {
+          const prevName = d.stops[d.trainPos - 1]?.name || '';
+          const nextName = stop.name;
+          html += `
+            <div class="train-row">
+              <div style="position:absolute;left:18px;top:-26px;width:3px;height:40px;background:linear-gradient(to bottom,var(--gray-200),${d.color});transform:translateX(-50%);border-radius:0 0 2px 2px;z-index:2;"></div>
+              <div class="train-position-col">
+                <div class="train-icon-wrap">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                    <rect x="4" y="3" width="16" height="16" rx="3"/>
+                    <path d="M4 11h16"/><path d="M8 19v2M16 19v2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="train-status-info">
+                <div>
+                  <p class="train-status-name">Train #${d.trainNum}</p>
+                  <p class="train-status-meta">Between ${prevName.split(' ')[0]} &amp; ${nextName.split(' ')[0]}</p>
+                </div>
+                <div style="text-align:right;">
+                  <p style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:18px;color:var(--gold-400);line-height:1;">↑ 42</p>
+                  <p style="font-size:10px;opacity:0.6;font-weight:500;margin-top:1px;">mph</p>
+                </div>
+              </div>
+              <div style="position:absolute;left:18px;bottom:-14px;width:3px;height:28px;background:${d.color};transform:translateX(-50%);z-index:2;opacity:0.5;"></div>
+            </div>`;
+        }
+
+        if (isPassed) {
+          html += `
+            <div class="stop-row${majorClass} passed">
+              ${!isFirst ? `<div class="stop-connector" style="background:var(--gray-200);"></div>` : ''}
+              <div class="stop-col">
+                <div class="stop-circle" style="border-color:var(--gray-300);background:var(--gray-200);"></div>
+              </div>
+              <div class="stop-info">
+                <div>
+                  <p class="stop-name-text">${stop.name}</p>
+                  <p class="stop-eta" style="font-size:11px;color:var(--gray-400);font-weight:500;">Departed ${time}</p>
+                </div>
+                ${isFirst ? `<span style="font-size:10px;font-weight:600;color:var(--gray-300);text-transform:uppercase;letter-spacing:0.5px;">Origin</span>` : ''}
+              </div>
+            </div>`;
+        } else if (isNext) {
+          html += `
+            <div class="stop-row${majorClass}" style="margin-top:0;">
+              <div class="stop-connector" style="background:${d.color};"></div>
+              <div class="stop-col">
+                <div class="stop-circle" style="border-color:${d.color};width:18px;height:18px;border-width:3.5px;"></div>
+              </div>
+              <div class="stop-info">
+                <a href="station.html" style="text-decoration:none;">
+                  <p class="stop-name-text" style="color:var(--green-800);">${stop.name}</p>
+                  <p style="font-size:11px;color:${d.color};font-weight:700;margin-top:2px;">Arrives in ~4 min · ${time}</p>
+                </a>
+                <div class="chip chip-ontime" style="flex-shrink:0;"><span class="dot"></span> Next</div>
+              </div>
+            </div>`;
+        } else if (isLast) {
+          html += `
+            <div class="stop-row${majorClass}">
+              <div class="stop-col">
+                <div class="stop-circle" style="border-color:${d.color};width:20px;height:20px;border-width:4px;"></div>
+              </div>
+              <div class="stop-info">
+                <a href="station.html" style="text-decoration:none;">
+                  <p class="stop-name-text" style="font-size:15px;font-weight:700;">${stop.name}</p>
+                  <p class="stop-eta">${time} · Terminus</p>
+                </a>
+                <span style="font-size:10px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;">Final</span>
+              </div>
+            </div>`;
+        } else {
+          html += `
+            <div class="stop-row${majorClass}">
+              <div class="stop-connector" style="background:${d.color};"></div>
+              <div class="stop-col">
+                <div class="stop-circle" style="border-color:${d.color};"></div>
+              </div>
+              <div class="stop-info">
+                <div>
+                  <p class="stop-name-text">${stop.name}</p>
+                  <p class="stop-eta">${time}</p>
+                </div>
+              </div>
+            </div>`;
+        }
+      });
+
+      track.innerHTML = html;
+    }
+
+    function selectLine(btn, line) {
+      document.querySelectorAll('.line-sel-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderRoute(line);
+    }
+
+    // Render default line on load
+    renderRoute('montclair');
+  </script>
+</body>
+</html>

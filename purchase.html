@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NJ Transit — Purchase Ticket</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .confirm-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; opacity: 0.55; margin-bottom: 4px;
+    }
+    .confirm-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 20px; letter-spacing: 0.3px;
+      text-transform: uppercase; line-height: 1.1;
+    }
+    .confirm-time-big {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 34px;
+      letter-spacing: -0.5px; line-height: 1;
+      color: var(--white);
+    }
+    .confirm-time-sub { font-size: 12px; opacity: 0.6; font-weight: 500; margin-top: 3px; }
+
+    .price-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--sp-3) 0; border-bottom: 1px solid var(--gray-100);
+    }
+    .price-row:last-child { border-bottom: none; }
+    .price-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+    .price-val   { font-size: 14px; font-weight: 700; color: var(--gray-900); }
+    .price-val.total {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 22px;
+      color: var(--green-800); letter-spacing: -0.3px;
+    }
+
+    /* Confirm button loading state */
+    .btn-confirm {
+      position: relative; overflow: hidden;
+    }
+    .btn-confirm.loading {
+      pointer-events: none; opacity: 0.8;
+    }
+    .btn-confirm.loading::after {
+      content: '';
+      position: absolute;
+      left: -100%; top: 0; bottom: 0;
+      width: 60%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      animation: shimmer 1s ease-in-out infinite;
+    }
+    @keyframes shimmer {
+      from { left: -100%; }
+      to   { left: 200%; }
+    }
+
+    /* Success overlay */
+    .success-overlay {
+      position: absolute; inset: 0;
+      background: var(--cream-50);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: var(--sp-8);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease;
+      z-index: 50;
+      border-radius: var(--r-2xl);
+    }
+    .success-overlay.show { opacity: 1; pointer-events: all; }
+
+    .success-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--green-100);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: var(--sp-5);
+      animation: scaleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes scaleIn {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Success overlay -->
+    <div class="success-overlay" id="success-overlay">
+      <div class="success-circle">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h2 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:32px; text-transform:uppercase; color:var(--gray-900); text-align:center; margin-bottom:var(--sp-2);">Ticket Purchased!</h2>
+      <p style="font-size:14px; color:var(--gray-500); text-align:center; line-height:1.5; margin-bottom:var(--sp-6);">Your ticket has been added to your wallet. Have a great trip!</p>
+      <a href="tickets.html" class="btn btn-primary" style="width:100%; justify-content:center;">
+        View My Tickets
+      </a>
+      <a href="index.html" style="margin-top:var(--sp-3); font-size:14px; font-weight:600; color:var(--gray-500);">Back to Home</a>
+    </div>
+
+    <!-- ── Green Header ──────────────────────── -->
+    <div class="page-header">
+      <div class="status-bar light" style="padding: 14px 0 0;">
+        <span class="time" id="status-time">9:41</span>
+        <div class="icons">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0" opacity="0.4"/><path d="M1.42 9a16 16 0 0 1 21.16 0" opacity="0.2"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M22 11v3" stroke-linecap="round"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 z-1" style="margin-top:var(--sp-5); margin-bottom:var(--sp-4);">
+        <a href="trip.html" class="back-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </a>
+        <div>
+          <p style="font-size:11px; font-weight:600; opacity:0.5; letter-spacing:1px; text-transform:uppercase;">Checkout</p>
+          <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:30px; letter-spacing:0.5px; text-transform:uppercase; line-height:1; margin-top:2px;">Purchase Ticket</h1>
+        </div>
+      </div>
+
+      <!-- Trip confirm card -->
+      <div class="trip-confirm-card z-1">
+        <div class="flex items-center justify-between mb-4">
+          <span id="line-badge-el" class="line-badge badge-montclair" style="font-size:10px; height:22px;">MCB</span>
+          <span style="font-size:12px; opacity:0.55; font-weight:500;" id="train-no-el">Train #3284</span>
+        </div>
+
+        <div class="confirm-label">From</div>
+        <div class="confirm-val" id="from-el">Montclair Heights</div>
+
+        <div style="margin: var(--sp-3) 0; display:flex; align-items:center; gap:var(--sp-3);">
+          <div style="flex:1;">
+            <div class="confirm-label">Departs</div>
+            <div class="confirm-time-big" id="dep-el">8:47 AM</div>
+            <div class="confirm-time-sub" id="line-name-el">Montclair-Boonton</div>
+          </div>
+          <div style="opacity:0.3;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+          <div style="text-align:right; flex:1;">
+            <div class="confirm-label">Arrives</div>
+            <div class="confirm-time-big" id="arr-el">9:23 AM</div>
+            <div class="confirm-time-sub" id="dur-el">36 min · 7 stops</div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:var(--sp-3); display:flex; align-items:center; gap:var(--sp-4);">
+          <div class="confirm-label" style="margin:0;">→</div>
+          <div class="confirm-val" style="font-size:16px;" id="to-el">Hoboken Terminal</div>
+          <div style="margin-left:auto;">
+            <div class="confirm-label" style="text-align:right;">Track</div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:18px; color:var(--gold-400);" id="track-el">4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Scrollable Content ─────────────────── -->
+    <div class="page-content">
+      <div class="px-6 pt-5">
+
+        <!-- Ticket type selector -->
+        <div class="section-hdr mb-3">
+          <h2 class="section-title">Select Ticket Type</h2>
+        </div>
+
+        <div class="ticket-type-grid mb-5">
+          <button class="tt-btn active" onclick="selectType(this,'oneway',14.50)" id="tt-oneway">
+            <div class="tt-name">One Way</div>
+            <div class="tt-price" id="price-oneway">$14.50</div>
+            <div class="tt-sub">Single trip</div>
+          </button>
+          <button class="tt-btn" onclick="selectType(this,'roundtrip',26.00)" id="tt-roundtrip">
+            <div class="tt-name">Round Trip</div>
+            <div class="tt-price" id="price-roundtrip">$26.00</div>
+            <div class="tt-sub">Save 10%</div>
+          </button>
+          <button class="tt-btn" onclick="selectType(this,'monthly',189.00)" id="tt-monthly">
+            <div class="tt-name">Monthly Pass</div>
+            <div class="tt-price" id="price-monthly">$189</div>
+            <div class="tt-sub">Unlimited rides</div>
+          </button>
+        </div>
+
+        <!-- Passenger count -->
+        <div class="card mb-5" style="padding:var(--sp-4);">
+          <div class="flex items-center justify-between">
+            <div>
+              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Passengers</p>
+              <p style="font-size:12px; color:var(--gray-500); margin-top:2px;">Adult · Ages 18+</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="changeCount(-1)" style="width:32px; height:32px; border-radius:50%; background:var(--gray-100); border:none; font-size:18px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gray-700);">−</button>
+              <span id="count-el" style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:24px; min-width:20px; text-align:center;">1</span>
+              <button onclick="changeCount(1)"  style="width:32px; height:32px; border-radius:50%; background:var(--green-800); border:none; font-size:18px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white;">+</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price breakdown -->
+        <div class="section-hdr mb-3">
+          <h2 class="section-title">Price Summary</h2>
+        </div>
+        <div class="card mb-5" style="padding:var(--sp-3) var(--sp-4);">
+          <div class="price-row">
+            <span class="price-label" id="price-label-1">1× One Way</span>
+            <span class="price-val" id="price-subtotal">$14.50</span>
+          </div>
+          <div class="price-row">
+            <span class="price-label">NJ Transit Service Fee</span>
+            <span class="price-val">$0.75</span>
+          </div>
+          <div class="price-row" style="border-bottom:none; padding-top:var(--sp-3); margin-top:var(--sp-1);">
+            <span style="font-size:15px; font-weight:700; color:var(--gray-900);">Total</span>
+            <span class="price-val total" id="price-total">$15.25</span>
+          </div>
+        </div>
+
+        <!-- Payment method -->
+        <div class="section-hdr mb-3">
+          <h2 class="section-title">Payment</h2>
+        </div>
+        <div class="card mb-6" style="padding:var(--sp-3) var(--sp-4);">
+          <div class="flex items-center gap-3">
+            <div class="card-brand brand-visa" style="font-size:12px; color:white; font-weight:800;">VISA</div>
+            <div class="flex-1">
+              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Visa ending in 4242</p>
+              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Expires 09/27</p>
+            </div>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+
+        <!-- Confirm button -->
+        <button class="btn btn-primary btn-confirm w-full" id="confirm-btn" onclick="confirmPurchase()"
+                style="height:56px; font-size:17px; font-weight:700; border-radius:var(--r-full); margin-bottom:var(--sp-3); justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Confirm Purchase
+        </button>
+        <p style="text-align:center; font-size:11px; color:var(--gray-400); padding-bottom:var(--sp-4);">
+          By purchasing you agree to NJ Transit's <a href="#" style="color:var(--green-800);">Terms of Service</a>
+        </p>
+
+      </div>
+    </div>
+
+    <!-- ── Bottom Nav ─────────────────────────── -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="trip.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </a>
+      <a href="tickets.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+        <span>Tickets</span>
+      </a>
+      <a href="map.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span>Map</span>
+      </a>
+      <a href="account.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    // Clock
+    (function(){
+      const now = new Date();
+      const h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+      document.getElementById('status-time').textContent = `${h%12||12}:${m}`;
+    })();
+
+    // Parse URL params
+    const p = new URLSearchParams(location.search);
+    const tripData = {
+      from:   p.get('from')   || 'Montclair Heights',
+      to:     p.get('to')     || 'Hoboken Terminal',
+      dep:    p.get('dep')    || '8:47 AM',
+      arr:    p.get('arr')    || '9:23 AM',
+      dur:    p.get('dur')    || '36',
+      stops:  p.get('stops')  || '7',
+      line:   p.get('line')   || 'Montclair-Boonton',
+      badge:  p.get('badge')  || 'badge-montclair',
+      track:  p.get('track')  || '4',
+      train:  p.get('train')  || '3284',
+    };
+
+    // Populate UI
+    document.getElementById('from-el').textContent    = tripData.from;
+    document.getElementById('to-el').textContent      = tripData.to;
+    document.getElementById('dep-el').textContent     = tripData.dep;
+    document.getElementById('arr-el').textContent     = tripData.arr;
+    document.getElementById('line-name-el').textContent = tripData.line;
+    document.getElementById('dur-el').textContent     = `${tripData.dur} min · ${tripData.stops} stops`;
+    document.getElementById('track-el').textContent   = tripData.track;
+    document.getElementById('train-no-el').textContent = `Train #${tripData.train}`;
+    const badge = document.getElementById('line-badge-el');
+    badge.className = `line-badge ${tripData.badge}`;
+    badge.textContent = tripData.badge.replace('badge-','').toUpperCase().replace('MONTCLAIR','MCB').replace('NE','NEC').replace('COASTAL','NJC').replace('MORRIS','M&E').replace('RARITAN','RVL');
+
+    // Ticket type state
+    let selectedType = 'oneway';
+    let selectedPrice = 14.50;
+    let passengerCount = 1;
+
+    function selectType(btn, type, price) {
+      document.querySelectorAll('.tt-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedType = type; selectedPrice = price;
+      updateTotal();
+    }
+
+    function changeCount(delta) {
+      passengerCount = Math.max(1, Math.min(6, passengerCount + delta));
+      document.getElementById('count-el').textContent = passengerCount;
+      updateTotal();
+    }
+
+    function updateTotal() {
+      const subtotal = selectedPrice * passengerCount;
+      const fee = 0.75 * passengerCount;
+      const total = subtotal + fee;
+      const label = selectedType === 'oneway' ? 'One Way' : selectedType === 'roundtrip' ? 'Round Trip' : 'Monthly Pass';
+      document.getElementById('price-label-1').textContent = `${passengerCount}× ${label}`;
+      document.getElementById('price-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+      document.getElementById('price-total').textContent    = `$${total.toFixed(2)}`;
+    }
+
+    function confirmPurchase() {
+      const btn = document.getElementById('confirm-btn');
+      btn.classList.add('loading');
+      btn.textContent = 'Processing…';
+
+      setTimeout(() => {
+        // Save to localStorage
+        const ticket = {
+          id:      Date.now(),
+          from:    tripData.from,
+          to:      tripData.to,
+          dep:     tripData.dep,
+          arr:     tripData.arr,
+          dur:     tripData.dur,
+          stops:   tripData.stops,
+          line:    tripData.line,
+          badge:   tripData.badge,
+          track:   tripData.track,
+          train:   tripData.train,
+          type:    selectedType,
+          passengers: passengerCount,
+          price:   (selectedPrice * passengerCount + 0.75 * passengerCount).toFixed(2),
+          date:    new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+          status:  'held'
+        };
+        const tickets = JSON.parse(localStorage.getItem('njtransit_tickets') || '[]');
+        tickets.unshift(ticket);
+        localStorage.setItem('njtransit_tickets', JSON.stringify(tickets));
+
+        // Show success
+        document.getElementById('success-overlay').classList.add('show');
+      }, 1400);
+    }
+  </script>
+</body>
+</html>

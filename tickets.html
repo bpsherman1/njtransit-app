@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NJ Transit — My Tickets</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .empty-state {
+      text-align: center;
+      padding: var(--sp-10) var(--sp-6);
+    }
+    .empty-icon {
+      width: 64px; height: 64px;
+      background: var(--gray-100);
+      border-radius: var(--r-full);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto var(--sp-4);
+    }
+    .type-chip {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 8px;
+      border-radius: var(--r-full);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.8);
+    }
+    .saved-route-dest { font-weight: 700; font-size: 14px; color: var(--gray-900); line-height: 1.2; }
+    .saved-route-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+
+    /* QR Overlay */
+    #qr-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.85);
+      align-items: center; justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      animation: fadeIn 0.2s ease;
+    }
+    #qr-overlay.open { display: flex; }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    .qr-modal {
+      background: #fff;
+      border-radius: 20px;
+      width: 100%; max-width: 340px;
+      padding: 28px 24px 24px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+      animation: slideUp 0.25s cubic-bezier(0.22,1,0.36,1);
+    }
+    @keyframes slideUp { from { transform: translateY(24px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    .qr-modal-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--gray-400); margin-bottom: 4px;
+    }
+    .qr-modal-route {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 22px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--gray-900); line-height: 1.2; margin-bottom: 20px;
+    }
+    .qr-modal-code {
+      display: flex; justify-content: center; align-items: center;
+      background: var(--gray-50); border-radius: 12px;
+      padding: 20px; margin-bottom: 20px;
+    }
+    .qr-modal-code svg { width: 180px; height: 180px; }
+    .qr-modal-meta {
+      display: flex; justify-content: center; gap: 20px;
+      margin-bottom: 20px; padding: 14px 0;
+      border-top: 1px solid var(--gray-100); border-bottom: 1px solid var(--gray-100);
+    }
+    .qr-meta-item { text-align: center; }
+    .qr-meta-val { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+    .qr-meta-lbl { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    .qr-done-btn {
+      width: 100%; height: 48px; border-radius: 12px; border: none;
+      background: var(--gold-500); color: var(--gray-900);
+      font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 15px;
+      cursor: pointer; letter-spacing: 0.3px;
+    }
+
+    /* Activate dialog — bottom sheet */
+    #activate-dialog {
+      display: none;
+      position: fixed; inset: 0; z-index: 201;
+      background: rgba(0,0,0,0.6);
+      align-items: flex-end; justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    #activate-dialog.open { display: flex; }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .activate-sheet {
+      width: 100%; max-width: 430px;
+      height: 87.5vh;
+      background: #0d2b1e;
+      border-radius: 24px 24px 0 0;
+      display: flex; flex-direction: column;
+      align-items: stretch; justify-content: center;
+      padding: 0 28px calc(env(safe-area-inset-bottom, 0px) + 32px);
+      box-sizing: border-box;
+      animation: sheetUp 0.32s cubic-bezier(0.22,1,0.36,1);
+    }
+    .activate-sheet-top {
+      display: flex; flex-direction: column;
+      margin-bottom: 32px;
+    }
+    .activate-sheet h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 48px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #fff;
+      line-height: 1; margin-bottom: 10px;
+    }
+    .activate-sheet-subtitle {
+      font-size: 15px; color: rgba(255,255,255,0.6);
+      line-height: 1.5; margin-bottom: 36px;
+    }
+    .activate-policy-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      margin-bottom: 20px;
+    }
+    .policy-icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .policy-text-main {
+      font-size: 14px; font-weight: 600; color: #fff;
+      line-height: 1.4; margin-bottom: 2px;
+    }
+    .policy-text-sub {
+      font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.3;
+    }
+    .activate-sheet-bottom {
+      width: 100%;
+      display: flex; flex-direction: column; align-items: stretch;
+      gap: 12px;
+    }
+    .btn-activate-sheet {
+      width: 100%; height: 64px; border-radius: 16px; border: none;
+      background: var(--gold-500); color: #1a1a1a;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 22px;
+      text-transform: uppercase; letter-spacing: 0.8px;
+      cursor: pointer;
+      box-shadow: 0 8px 32px rgba(240,165,0,0.35);
+    }
+    .btn-activate-sheet:active { background: #d9940a; }
+    .btn-cancel-sheet {
+      width: 100%; height: 48px; border-radius: 12px;
+      background: transparent; border: 1.5px solid rgba(255,255,255,0.25);
+      font-family: 'DM Sans', sans-serif; font-weight: 600;
+      font-size: 15px; color: rgba(255,255,255,0.7);
+      cursor: pointer;
+    }
+    .btn-cancel-sheet:active { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+    /* Countdown timer on active ticket */
+    .ticket-countdown {
+      padding: 10px 16px 0;
+    }
+    .countdown-bar-wrap {
+      height: 3px; background: var(--gray-100); border-radius: 2px;
+      overflow: hidden; margin-bottom: 6px;
+    }
+    .countdown-bar-fill {
+      height: 100%; border-radius: 2px;
+      background: var(--green-600);
+      transition: width 1s linear;
+    }
+    .countdown-text {
+      font-size: 11px; font-weight: 700; color: var(--green-800);
+      letter-spacing: 0.3px;
+    }
+    .countdown-text.expired { color: #d92b3a; }
+  </style>
+</head>
+<body>
+  <!-- QR Code Overlay -->
+  <div id="qr-overlay" onclick="closeOverlay()">
+    <div class="qr-modal" onclick="event.stopPropagation()">
+      <p class="qr-modal-label">Show to Conductor</p>
+      <p class="qr-modal-route" id="qr-route">—</p>
+      <div class="qr-modal-code" id="qr-code-box"></div>
+      <div class="qr-modal-meta">
+        <div class="qr-meta-item">
+          <div class="qr-meta-val" id="qr-dep">—</div>
+          <div class="qr-meta-lbl">Departs</div>
+        </div>
+        <div class="qr-meta-item">
+          <div class="qr-meta-val" id="qr-arr">—</div>
+          <div class="qr-meta-lbl">Arrives</div>
+        </div>
+        <div class="qr-meta-item">
+          <div class="qr-meta-val" id="qr-date">—</div>
+          <div class="qr-meta-lbl">Date</div>
+        </div>
+      </div>
+      <button class="qr-done-btn" onclick="closeOverlay()">Done</button>
+    </div>
+  </div>
+
+  <!-- Activate Confirmation — fullscreen dark-green overlay -->
+  <div id="activate-dialog">
+    <div class="activate-sheet">
+      <div style="width:40px; height:4px; border-radius:2px; background:rgba(255,255,255,0.2); margin: 0 auto 28px; flex-shrink:0;"></div>
+      <div class="activate-sheet-top">
+        <h3>Activate<br>Ticket?</h3>
+        <p class="activate-sheet-subtitle">Your QR code will be revealed to show to the conductor. Please read before activating.</p>
+
+        <div class="activate-policy-row">
+          <div class="policy-icon-wrap">⏱</div>
+          <div>
+            <p class="policy-text-main">Valid for 2 hours and 45 minutes</p>
+            <p class="policy-text-sub">Timer starts the moment you activate</p>
+          </div>
+        </div>
+        <div class="activate-policy-row">
+          <div class="policy-icon-wrap">🔒</div>
+          <div>
+            <p class="policy-text-main">Cannot be deactivated or reused</p>
+            <p class="policy-text-sub">Activation is permanent and irreversible</p>
+          </div>
+        </div>
+        <div class="activate-policy-row">
+          <div class="policy-icon-wrap">📅</div>
+          <div>
+            <p class="policy-text-main">Expires 30 days after purchase</p>
+            <p class="policy-text-sub">If not activated before the expiry date</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="activate-sheet-bottom">
+        <button class="btn-cancel-sheet" onclick="closeActivateDialog()">Cancel</button>
+        <button class="btn-activate-sheet" id="confirm-activate-btn" onclick="confirmActivateAndOpen()">Activate &amp; Show Ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+
+    <!-- ── Green Header ──────────────────────── -->
+    <div class="page-header">
+      <div class="status-bar light" style="padding: 14px 0 0;">
+        <span class="time" id="status-time">9:41</span>
+        <div class="icons">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0" opacity="0.4"/><path d="M1.42 9a16 16 0 0 1 21.16 0" opacity="0.2"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M22 11v3" stroke-linecap="round"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between z-1" style="margin-top:var(--sp-5); margin-bottom:var(--sp-5);">
+        <div>
+          <p style="font-size:11px; font-weight:600; opacity:0.5; letter-spacing:1px; text-transform:uppercase;">Wallet</p>
+          <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:34px; letter-spacing:0.5px; text-transform:uppercase; line-height:1; margin-top:2px;">My Tickets</h1>
+        </div>
+        <a href="trip.html" class="btn btn-gold" style="height:40px; padding:0 16px; font-size:13px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Buy Ticket
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Scrollable Content ─────────────────── -->
+    <div class="page-content">
+      <div class="px-6 pt-5">
+
+        <!-- Active Tickets -->
+        <div class="section-hdr mb-4">
+          <h2 class="section-title">Active Tickets</h2>
+          <span id="active-count" style="font-size:13px; font-weight:600; color:var(--gray-500);">2 tickets</span>
+        </div>
+
+        <div id="active-tickets-list" class="flex flex-col mb-6" style="gap:30px;">
+          <!-- Populated by JS + defaults below -->
+        </div>
+
+        <!-- Saved for Quick Buy -->
+        <div class="section-hdr mb-3">
+          <h2 class="section-title">Quick Buy</h2>
+          <span style="font-size:12px; color:var(--gray-500);">Saved routes</span>
+        </div>
+        <p style="font-size:12px; color:var(--gray-500); margin-bottom:var(--sp-3);">Re-purchase a favourite trip in one tap.</p>
+
+        <div class="flex flex-col gap-3 mb-6">
+
+          <a href="purchase.html?from=Montclair+Heights&to=Hoboken+Terminal&dep=Next+Avail&arr=--&dur=36&stops=7&line=Montclair-Boonton&badge=badge-montclair&track=TBD&train=TBD"
+             class="saved-ticket-row">
+            <div class="route-icon-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+            </div>
+            <div class="flex-1">
+              <p class="saved-route-dest">Montclair Heights → Hoboken</p>
+              <p class="saved-route-meta">Montclair-Boonton · ~36 min · One Way</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:16px; color:var(--green-800);">$14.50</span>
+              <span class="line-badge badge-montclair" style="font-size:9px; height:18px; padding:0 7px;">MCB</span>
+            </div>
+          </a>
+
+          <a href="purchase.html?from=Newark+Penn+Station&to=New+York+Penn+Station&dep=Next+Avail&arr=--&dur=26&stops=3&line=NE+Corridor&badge=badge-ne&track=TBD&train=TBD"
+             class="saved-ticket-row">
+            <div class="route-icon-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+            </div>
+            <div class="flex-1">
+              <p class="saved-route-dest">Newark Penn → New York</p>
+              <p class="saved-route-meta">NE Corridor · ~26 min · One Way</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:16px; color:var(--green-800);">$9.75</span>
+              <span class="line-badge badge-ne" style="font-size:9px; height:18px; padding:0 7px;">NEC</span>
+            </div>
+          </a>
+
+          <a href="purchase.html?from=Hoboken+Terminal&to=Secaucus+Junction&dep=Next+Avail&arr=--&dur=8&stops=1&line=Montclair-Boonton&badge=badge-montclair&track=TBD&train=TBD"
+             class="saved-ticket-row">
+            <div class="route-icon-wrap">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+            </div>
+            <div class="flex-1">
+              <p class="saved-route-dest">Hoboken → Secaucus Jct</p>
+              <p class="saved-route-meta">Montclair-Boonton · ~8 min · One Way</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:16px; color:var(--green-800);">$4.25</span>
+              <span class="line-badge badge-montclair" style="font-size:9px; height:18px; padding:0 7px;">MCB</span>
+            </div>
+          </a>
+
+        </div>
+
+      </div><!-- /px-6 -->
+    </div><!-- /page-content -->
+
+    <!-- ── Bottom Nav ─────────────────────────── -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="trip.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </a>
+      <a href="tickets.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+        <span>Tickets</span>
+      </a>
+      <a href="map.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span>Map</span>
+      </a>
+      <a href="account.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    // Clock
+    (function(){
+      const now = new Date();
+      document.getElementById('status-time').textContent = `${now.getHours()%12||12}:${String(now.getMinutes()).padStart(2,'0')}`;
+    })();
+
+    // Default demo tickets (shown when nothing in localStorage)
+    const DEMO_TICKETS = [
+      {
+        id: 1, from: 'Montclair Heights', to: 'Hoboken Terminal',
+        dep: '8:47 AM', arr: '9:23 AM', dur: '36', stops: '7',
+        line: 'Montclair-Boonton', badge: 'badge-montclair',
+        track: '4', train: '3284', type: 'oneway', passengers: 1,
+        price: '15.25', date: 'Mar 28, 2026', status: 'active',
+        activatedAt: Date.now() - 15 * 60 * 1000
+      },
+      {
+        id: 2, from: 'Newark Penn Station', to: 'New York Penn Station',
+        dep: '7:22 AM', arr: '7:48 AM', dur: '26', stops: '3',
+        line: 'Northeast Corridor', badge: 'badge-ne',
+        track: '9', train: '1147', type: 'roundtrip', passengers: 1,
+        price: '20.25', date: 'Mar 28, 2026', status: 'held'
+      }
+    ];
+
+    const TYPE_LABELS = { oneway: 'One Way', roundtrip: 'Round Trip', monthly: 'Monthly Pass' };
+    const BADGE_ABBR  = {
+      'badge-montclair': 'MCB', 'badge-ne': 'NEC', 'badge-coastal': 'NJCL',
+      'badge-morris': 'M&E', 'badge-raritan': 'RVL', 'badge-main': 'ML',
+      'badge-njcl': 'NJCL', 'badge-morristown': 'ML', 'badge-gladstone': 'GB',
+      'badge-pascack': 'PVL', 'badge-acl': 'ACL', 'badge-portjervis': 'PJL',
+      'badge-meadowlands': 'MDWS'
+    };
+
+    function qrSVG() {
+      return `<svg width="64" height="64" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="7" height="7" rx="1" fill="#1a5c38"/>
+        <rect x="1" y="1" width="5" height="5" rx="0.5" fill="white"/>
+        <rect x="2" y="2" width="3" height="3" fill="#1a5c38"/>
+        <rect x="14" y="0" width="7" height="7" rx="1" fill="#1a5c38"/>
+        <rect x="15" y="1" width="5" height="5" rx="0.5" fill="white"/>
+        <rect x="16" y="2" width="3" height="3" fill="#1a5c38"/>
+        <rect x="0" y="14" width="7" height="7" rx="1" fill="#1a5c38"/>
+        <rect x="1" y="15" width="5" height="5" rx="0.5" fill="white"/>
+        <rect x="2" y="16" width="3" height="3" fill="#1a5c38"/>
+        <rect x="9" y="0" width="1" height="1" fill="#1a5c38"/>
+        <rect x="11" y="0" width="1" height="1" fill="#1a5c38"/>
+        <rect x="10" y="1" width="1" height="1" fill="#1a5c38"/>
+        <rect x="8" y="2" width="2" height="1" fill="#1a5c38"/>
+        <rect x="12" y="2" width="1" height="1" fill="#1a5c38"/>
+        <rect x="8" y="4" width="1" height="1" fill="#1a5c38"/>
+        <rect x="10" y="4" width="2" height="1" fill="#1a5c38"/>
+        <rect x="8" y="6" width="3" height="1" fill="#1a5c38"/>
+        <rect x="0" y="8" width="1" height="1" fill="#1a5c38"/>
+        <rect x="2" y="8" width="2" height="1" fill="#1a5c38"/>
+        <rect x="6" y="8" width="3" height="1" fill="#1a5c38"/>
+        <rect x="11" y="8" width="2" height="1" fill="#1a5c38"/>
+        <rect x="14" y="8" width="1" height="1" fill="#1a5c38"/>
+        <rect x="17" y="8" width="2" height="1" fill="#1a5c38"/>
+        <rect x="0" y="10" width="3" height="1" fill="#1a5c38"/>
+        <rect x="5" y="10" width="1" height="1" fill="#1a5c38"/>
+        <rect x="8" y="10" width="2" height="1" fill="#1a5c38"/>
+        <rect x="12" y="10" width="3" height="1" fill="#1a5c38"/>
+        <rect x="17" y="10" width="2" height="1" fill="#1a5c38"/>
+        <rect x="1" y="12" width="2" height="1" fill="#1a5c38"/>
+        <rect x="5" y="12" width="2" height="1" fill="#1a5c38"/>
+        <rect x="9" y="12" width="1" height="1" fill="#1a5c38"/>
+        <rect x="11" y="12" width="4" height="1" fill="#1a5c38"/>
+        <rect x="18" y="12" width="3" height="1" fill="#1a5c38"/>
+        <rect x="8" y="14" width="2" height="1" fill="#1a5c38"/>
+        <rect x="12" y="14" width="1" height="1" fill="#1a5c38"/>
+        <rect x="16" y="14" width="2" height="1" fill="#1a5c38"/>
+        <rect x="8" y="16" width="1" height="1" fill="#1a5c38"/>
+        <rect x="11" y="16" width="3" height="1" fill="#1a5c38"/>
+        <rect x="16" y="16" width="2" height="1" fill="#1a5c38"/>
+        <rect x="8" y="18" width="3" height="1" fill="#1a5c38"/>
+        <rect x="14" y="18" width="1" height="1" fill="#1a5c38"/>
+        <rect x="16" y="18" width="3" height="1" fill="#1a5c38"/>
+        <rect x="8" y="20" width="1" height="1" fill="#1a5c38"/>
+        <rect x="10" y="20" width="2" height="1" fill="#1a5c38"/>
+        <rect x="14" y="20" width="2" height="1" fill="#1a5c38"/>
+        <rect x="18" y="20" width="3" height="1" fill="#1a5c38"/>
+      </svg>`;
+    }
+
+    function renderTicket(t) {
+      const abbr = BADGE_ABBR[t.badge] || t.badge.replace('badge-','').toUpperCase();
+      const typeLabel = TYPE_LABELS[t.type] || t.type;
+      const isActive = t.status === 'active';
+
+      if (isActive) {
+        return `
+          <div class="ticket-card" onclick="openTicket(${t.id})" style="cursor:pointer;">
+            <div class="ticket-top">
+              <div class="ticket-status-badge active-green">● Active</div>
+              <div class="flex items-center gap-2" style="margin-bottom:var(--sp-3);">
+                <span class="line-badge ${t.badge}" style="font-size:10px; height:20px; padding:0 8px;">${abbr}</span>
+                <span style="font-size:13px; font-weight:600; opacity:0.7;">${t.line}</span>
+              </div>
+              <div class="ticket-route">${t.from}</div>
+              <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:13px; opacity:0.5; letter-spacing:1px; margin:3px 0;">→ TO</div>
+              <div class="ticket-route">${t.to}</div>
+              <div class="ticket-time-row" style="margin-top:var(--sp-4);">
+                <div>
+                  <div class="ticket-time-val">${t.dep}</div>
+                  <div class="ticket-time-sub">Depart</div>
+                </div>
+                <div class="ticket-arrow">→</div>
+                <div>
+                  <div class="ticket-time-val">${t.arr}</div>
+                  <div class="ticket-time-sub">Arrive</div>
+                </div>
+                <div style="margin-left:auto; text-align:right;">
+                  <div style="font-size:11px; opacity:0.5; margin-bottom:2px;">Type</div>
+                  <span class="type-chip">${typeLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div class="ticket-countdown" data-activated="${t.activatedAt || Date.now()}">
+              <div class="countdown-bar-wrap">
+                <div class="countdown-bar-fill" style="width:100%;"></div>
+              </div>
+              <p class="countdown-text">Calculating…</p>
+            </div>
+            <div class="ticket-tear"></div>
+            <div class="ticket-bottom">
+              <div class="ticket-info">
+                <p style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--gray-400); margin-bottom:2px;">Date Purchased</p>
+                <p style="font-size:13px; font-weight:600; color:var(--gray-900);">${t.date}</p>
+                <p style="font-size:12px; color:var(--gray-500); margin-top:2px;">Track ${t.track} · Train #${t.train}</p>
+                <p style="font-size:14px; font-weight:700; color:var(--green-800); margin-top:var(--sp-2);">$${t.price}</p>
+              </div>
+              <div class="qr-box">${qrSVG()}</div>
+            </div>
+          </div>`;
+      } else {
+        // Held / inactive ticket
+        return `
+          <div class="ticket-card" style="cursor:pointer;">
+            <div class="ticket-top" style="background: linear-gradient(135deg, #2e5240 0%, #1e3a2b 100%);">
+              <div class="ticket-status-badge" style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.15);">◌ Held</div>
+              <div class="flex items-center gap-2" style="margin-bottom:var(--sp-3);">
+                <span class="line-badge ${t.badge}" style="font-size:10px; height:20px; padding:0 8px;">${abbr}</span>
+                <span style="font-size:13px; font-weight:600; opacity:0.8;">${t.line}</span>
+              </div>
+              <div class="ticket-route">${t.from}</div>
+              <div style="font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:13px; opacity:0.5; letter-spacing:1px; margin:3px 0;">→ TO</div>
+              <div class="ticket-route">${t.to}</div>
+              <div class="ticket-time-row" style="margin-top:var(--sp-4);">
+                <div>
+                  <div class="ticket-time-val">${t.dep}</div>
+                  <div class="ticket-time-sub">Depart</div>
+                </div>
+                <div class="ticket-arrow">→</div>
+                <div>
+                  <div class="ticket-time-val">${t.arr}</div>
+                  <div class="ticket-time-sub">Arrive</div>
+                </div>
+                <div style="margin-left:auto; text-align:right;">
+                  <div style="font-size:11px; opacity:0.5; margin-bottom:2px;">Type</div>
+                  <span class="type-chip">${typeLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div class="ticket-tear"></div>
+            <div class="ticket-bottom">
+              <div class="ticket-info">
+                <p style="font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--gray-400); margin-bottom:2px;">Date Purchased</p>
+                <p style="font-size:13px; font-weight:600; color:var(--gray-900);">${t.date}</p>
+                <p style="font-size:12px; color:var(--gray-500); margin-top:2px;">Track ${t.track} · Train #${t.train}</p>
+                <p style="font-size:14px; font-weight:700; color:var(--green-800); margin-top:var(--sp-2);">$${t.price}</p>
+              </div>
+              <div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
+                <div class="qr-box" style="filter:blur(4px); opacity:0.35;">${qrSVG()}</div>
+                <button onclick="promptActivate(${t.id}); event.stopPropagation();" style="background:var(--green-800); color:#fff; border:none; border-radius:var(--r-lg); padding:10px 18px; font-size:13px; font-weight:700; font-family:'DM Sans',sans-serif; cursor:pointer; letter-spacing:0.3px; white-space:nowrap; box-shadow:0 4px 14px rgba(17,68,40,0.35);">Activate</button>
+              </div>
+            </div>
+          </div>`;
+      }
+    }
+
+    // Load tickets: combine localStorage + demo defaults
+    function loadTickets() {
+      const stored  = JSON.parse(localStorage.getItem('njtransit_tickets') || '[]');
+      const all     = [...stored, ...DEMO_TICKETS.filter(d => !stored.find(s => s.id === d.id))];
+      const list    = document.getElementById('active-tickets-list');
+      const countEl = document.getElementById('active-count');
+
+      if (all.length === 0) {
+        list.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="2">
+              <path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/>
+            </svg>
+          </div>
+          <p style="font-size:16px; font-weight:700; color:var(--gray-700);">No active tickets</p>
+          <p style="font-size:13px; color:var(--gray-400); margin-top:6px;">Purchase a ticket from the Trip Planner</p>
+        </div>`;
+        countEl.textContent = '0 tickets';
+      } else {
+        list.innerHTML = all.map(renderTicket).join('');
+        countEl.textContent = `${all.length} ticket${all.length !== 1 ? 's' : ''}`;
+      }
+    }
+
+    function activateTicket(id) {
+      const stored = JSON.parse(localStorage.getItem('njtransit_tickets') || '[]');
+      const all = [...stored, ...DEMO_TICKETS.filter(d => !stored.find(s => s.id === d.id))];
+      const ticket = all.find(t => t.id === id);
+      if (ticket) {
+        const now = Date.now();
+        const updated = {...ticket, status: 'active', activatedAt: now};
+        const updatedStored = stored.find(s => s.id === id)
+          ? stored.map(s => s.id === id ? {...s, status: 'active', activatedAt: now} : s)
+          : [...stored, updated];
+        localStorage.setItem('njtransit_tickets', JSON.stringify(updatedStored));
+        loadTickets();
+      }
+    }
+
+    // ── Countdown timer ──────────────────────────
+    const TICKET_VALIDITY_MS = 2 * 60 * 60 * 1000 + 45 * 60 * 1000; // 2h 45m
+
+    function updateCountdowns() {
+      document.querySelectorAll('.ticket-countdown').forEach(el => {
+        const activatedAt = parseInt(el.dataset.activated, 10);
+        const elapsed = Date.now() - activatedAt;
+        const remaining = TICKET_VALIDITY_MS - elapsed;
+        const bar = el.querySelector('.countdown-bar-fill');
+        const text = el.querySelector('.countdown-text');
+        if (remaining <= 0) {
+          bar.style.width = '0%';
+          bar.style.background = '#d92b3a';
+          text.textContent = 'Ticket expired';
+          text.classList.add('expired');
+        } else {
+          const pct = (remaining / TICKET_VALIDITY_MS) * 100;
+          bar.style.width = pct + '%';
+          bar.style.background = pct < 20 ? '#d92b3a' : pct < 40 ? '#f0a500' : 'var(--green-600)';
+          const h = Math.floor(remaining / 3600000);
+          const m = Math.floor((remaining % 3600000) / 60000);
+          const s = Math.floor((remaining % 60000) / 1000);
+          text.textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} remaining`;
+          text.classList.remove('expired');
+        }
+      });
+    }
+
+    loadTickets();
+    updateCountdowns();
+    setInterval(updateCountdowns, 1000);
+
+    // ── QR Overlay ──────────────────────────────
+    let _pendingActivateId = null;
+
+    function getAllTickets() {
+      const stored = JSON.parse(localStorage.getItem('njtransit_tickets') || '[]');
+      return [...stored, ...DEMO_TICKETS.filter(d => !stored.find(s => s.id === d.id))];
+    }
+
+    function openTicket(id) {
+      const t = getAllTickets().find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('qr-route').textContent = `${t.from} → ${t.to}`;
+      document.getElementById('qr-dep').textContent = t.dep;
+      document.getElementById('qr-arr').textContent = t.arr;
+      document.getElementById('qr-date').textContent = t.date;
+      document.getElementById('qr-code-box').innerHTML = qrSVG();
+      document.getElementById('qr-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeOverlay() {
+      document.getElementById('qr-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function promptActivate(id) {
+      _pendingActivateId = id;
+      document.getElementById('activate-dialog').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeActivateDialog() {
+      _pendingActivateId = null;
+      document.getElementById('activate-dialog').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function confirmActivateAndOpen() {
+      const id = _pendingActivateId;
+      closeActivateDialog();
+      if (id == null) return;
+      activateTicket(id);
+      // activateTicket calls loadTickets which re-renders; update countdowns then open overlay
+      setTimeout(() => { updateCountdowns(); openTicket(id); }, 80);
+    }
+
+    // Close overlays on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeOverlay(); closeActivateDialog(); }
+    });
+  </script>
+</body>
+</html>

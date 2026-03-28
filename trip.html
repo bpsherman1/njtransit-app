@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NJ Transit — Train Search</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .swap-btn {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      width: 36px; height: 36px; border-radius: var(--r-full);
+      background: var(--green-800);
+      display: flex; align-items: center; justify-content: center;
+      border: none; cursor: pointer; box-shadow: var(--shadow-md);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s;
+      z-index: 5;
+    }
+    .swap-btn:active { background: var(--green-700); }
+    .swap-btn.spinning { transform: translateY(-50%) rotate(180deg); }
+    .input-group-wrap { position: relative; }
+
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+    .time-select {
+      background: var(--white); border-radius: var(--r-md);
+      padding: 12px 14px; border: 1.5px solid var(--gray-200);
+      box-shadow: var(--shadow-xs); cursor: pointer; transition: border-color 0.15s;
+    }
+    .time-select.active { border-color: var(--green-800); }
+    .time-select-label { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 3px; }
+    .time-select-value { font-size: 15px; font-weight: 600; color: var(--gray-900); }
+
+    .results-count { font-size: 13px; color: var(--gray-500); font-weight: 500; }
+
+    .featured-label {
+      position: absolute; top: -10px; left: 16px;
+      background: var(--green-800); color: var(--white);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; padding: 2px 10px;
+      border-radius: var(--r-full); z-index: 5;
+    }
+
+    .section-divider {
+      display: flex; align-items: center; gap: 10px;
+      margin: var(--sp-5) 0 var(--sp-4);
+    }
+    .section-divider::before, .section-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--gray-200);
+    }
+    .section-divider span {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--gray-400); white-space: nowrap;
+    }
+
+    /* Inline station inputs in header */
+    .station-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      color: var(--gray-900); padding: 9px 0; width: 100%; min-width: 0;
+      -webkit-text-fill-color: var(--gray-900);
+    }
+    .station-input::placeholder { color: var(--gray-400); -webkit-text-fill-color: var(--gray-400); }
+    .station-input:focus { color: var(--gray-900); -webkit-text-fill-color: var(--gray-900); }
+    .station-input::selection { background: rgba(34,109,70,0.18); color: var(--gray-900); }
+    .station-input:-webkit-autofill,
+    .station-input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--gray-900);
+      -webkit-box-shadow: 0 0 0 1000px #fff inset;
+    }
+
+    /* Station dropdown — fixed, appears below focused input */
+    #station-dropdown {
+      display: none; position: fixed; z-index: 300;
+      background: var(--white); border-radius: 0 0 14px 14px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+      overflow-y: auto; max-height: 260px; scrollbar-width: none;
+    }
+    #station-dropdown::-webkit-scrollbar { display: none; }
+    .dropdown-section-hdr {
+      padding: 10px 16px 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--gray-400);
+      background: var(--gray-50); border-bottom: 1px solid var(--gray-100);
+      position: sticky; top: 0;
+    }
+    .dropdown-result-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 16px; border-bottom: 1px solid var(--gray-50);
+      cursor: pointer; gap: 10px;
+    }
+    .dropdown-result-row:last-child { border-bottom: none; }
+    .dropdown-result-row:hover { background: var(--gray-50); }
+    .dropdown-station-name { font-size: 13px; font-weight: 600; color: var(--gray-900); flex: 1; }
+    .dropdown-badges { display: flex; gap: 3px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; max-width: 100px; }
+    .dropdown-empty { padding: 24px 16px; text-align: center; font-size: 13px; color: var(--gray-400); }
+
+    /* Popular routes section in main content */
+    .popular-route-card {
+      display: flex; align-items: center; padding: 14px 16px;
+      background: var(--white); border-radius: var(--r-lg);
+      border: 1.5px solid var(--gray-100); box-shadow: var(--shadow-xs);
+      cursor: pointer; gap: 12px; transition: border-color 0.15s;
+    }
+    .popular-route-card:active { border-color: var(--green-800); }
+    .popular-from { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .popular-to { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+    .popular-arrow { font-size: 16px; color: var(--gray-300); flex-shrink: 0; }
+
+    /* No-results empty state */
+    .no-results {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 24px; text-align: center; gap: 10px;
+    }
+    .no-results-title {
+      font-size: 15px; font-weight: 700; color: var(--gray-800); margin-top: 4px;
+    }
+    .no-results-body {
+      font-size: 13px; color: var(--gray-500); line-height: 1.55; max-width: 280px;
+    }
+    .no-results-body strong { color: var(--green-800); }
+
+    /* Quick-buy row on collapsed trip cards */
+    .trip-buy-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0 2px; margin-top: 8px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .trip-buy-price { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .btn-buy-quick {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--green-800); color: #fff;
+      border-radius: 8px; padding: 7px 14px;
+      font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+      text-decoration: none; border: none; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-buy-quick:active { background: var(--green-700); }
+    .popular-icon {
+      width: 32px; height: 32px; border-radius: var(--r-full); flex-shrink: 0;
+      background: rgba(34,109,70,0.09);
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Station Dropdown (fixed, outside .app) -->
+  <div id="station-dropdown"></div>
+
+  <div class="app">
+
+    <!-- ── Green Header ──────────────────────── -->
+    <div class="page-header">
+      <div class="status-bar light" style="padding: 14px 0 0;">
+        <span class="time" id="status-time">9:41</span>
+        <div class="icons">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0" opacity="0.4"/><path d="M1.42 9a16 16 0 0 1 21.16 0" opacity="0.2"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M22 11v3" stroke-linecap="round"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <div class="z-1" style="margin-top:var(--sp-5); margin-bottom:var(--sp-4);">
+        <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:34px; letter-spacing:0.5px; text-transform:uppercase; line-height:1;">Train Search</h1>
+      </div>
+
+      <!-- From / To -->
+      <div class="input-group-wrap z-1">
+        <div class="input-group">
+          <div class="input-row">
+            <span class="input-dot dot-origin"></span>
+            <input id="from-input" class="station-input" type="text"
+                   placeholder="Depart from..."
+                   onfocus="setDropdownTarget('from')" oninput="filterDropdown(this.value,'from')"
+                   onblur="scheduleCloseDropdown()" autocomplete="off" autocorrect="off" spellcheck="false">
+          </div>
+          <div class="input-row">
+            <span class="input-dot dot-dest"></span>
+            <input id="to-input" class="station-input" type="text"
+                   placeholder="Arrive at..."
+                   onfocus="setDropdownTarget('to')" oninput="filterDropdown(this.value,'to')"
+                   onblur="scheduleCloseDropdown()" autocomplete="off" autocorrect="off" spellcheck="false">
+          </div>
+        </div>
+        <button class="swap-btn" id="swap-btn" onclick="swapStations()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <path d="M7 16V4m0 0L3 8m4-4 4 4"/><path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Scrollable Content ─────────────────── -->
+    <div class="page-content">
+      <div class="px-6 pt-5">
+
+        <!-- Date / Time -->
+        <div class="time-grid mb-5">
+          <div class="time-select active">
+            <p class="time-select-label">Date</p>
+            <p class="time-select-value" id="trip-date">Today, Mar 28</p>
+          </div>
+          <div class="time-select">
+            <p class="time-select-label">Depart after</p>
+            <p class="time-select-value" id="trip-time">8:47 AM</p>
+          </div>
+        </div>
+
+        <!-- Popular Routes (shown when fields empty) -->
+        <div id="popular-section">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--gray-400); margin-bottom:12px;">Popular Routes</p>
+          <div class="flex flex-col gap-3">
+
+            <!-- ★ Saved route -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Glen Ridge','New York Penn Station')" style="border-color:rgba(240,165,0,0.35); background:rgba(240,165,0,0.04);">
+              <div class="popular-icon" style="background:rgba(240,165,0,0.12);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Glen Ridge</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-montclair" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">MCB</span>
+            </div>
+
+            <!-- Newark Penn → NY Penn (NEC) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Newark Penn Station','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Newark Penn Station</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-ne" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">NEC</span>
+            </div>
+
+            <!-- Hoboken → Secaucus Junction (MAIN) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Hoboken','Secaucus Junction')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Hoboken</p>
+                <p class="popular-to">→ Secaucus Junction</p>
+              </div>
+              <span class="line-badge badge-main" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">MAIN</span>
+            </div>
+
+            <!-- Montclair State U → NY Penn (MCB) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Montclair State University','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Montclair State University</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-montclair" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">MCB</span>
+            </div>
+
+            <!-- Long Branch → NY Penn (NJCL) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Long Branch','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Long Branch</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-coastal" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">NJCL</span>
+            </div>
+
+            <!-- Trenton → NY Penn (NEC) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Trenton','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Trenton</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-ne" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">NEC</span>
+            </div>
+
+            <!-- Summit → NY Penn (M&E) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Summit','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Summit</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-morristown" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">M&E</span>
+            </div>
+
+            <!-- Dover → NY Penn (MCB) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Dover','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Dover</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-montclair" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">MCB</span>
+            </div>
+
+            <!-- Morristown → NY Penn (M&E) -->
+            <div class="popular-route-card" onclick="selectPopularRoute('Morristown','New York Penn Station')">
+              <div class="popular-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div class="popular-route-text" style="flex:1;">
+                <p class="popular-from">Morristown</p>
+                <p class="popular-to">→ New York Penn Station</p>
+              </div>
+              <span class="line-badge badge-morristown" style="font-size:9px; height:18px; padding:0 7px; flex-shrink:0;">M&E</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Filters + Results (shown when both fields filled) -->
+        <div id="results-section" style="display:none;">
+
+        <!-- Filters — rebuilt by JS per search -->
+        <div class="filter-row mb-5" id="filter-row"></div>
+
+        <!-- Results header -->
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="section-title">Results</h2>
+          <span class="results-count">5 trains found</span>
+        </div>
+
+        <!-- ── TRIP RESULT CARDS — populated by JS ── -->
+        <div class="flex flex-col gap-3" id="results-list">
+        </div>
+        <div style="height:var(--sp-6);"></div>
+        </div><!-- /results-section -->
+      </div>
+    </div>
+
+    <!-- ── Bottom Nav ─────────────────────────── -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="trip.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </a>
+      <a href="tickets.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+        <span>Tickets</span>
+      </a>
+      <a href="map.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span>Map</span>
+      </a>
+      <a href="account.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    (function() {
+      const now = new Date();
+      const h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+      document.getElementById('status-time').textContent = `${h%12||12}:${m}`;
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      document.getElementById('trip-date').textContent = `Today, ${months[now.getMonth()]} ${now.getDate()}`;
+      const dep = new Date(now); dep.setMinutes(now.getMinutes() + 8, 0, 0);
+      const dh = dep.getHours(), dm = String(dep.getMinutes()).padStart(2,'0');
+      document.getElementById('trip-time').textContent = `${dh%12||12}:${dm} ${dh>=12?'PM':'AM'}`;
+    })();
+
+    // ── Authoritative Line & Station Data ────────────────────
+    const LINE_STATIONS = {
+      'badge-ne': {
+        name: 'Northeast Corridor', abbr: 'NEC',
+        stations: ['Trenton','Hamilton','Princeton Junction','New Brunswick','Edison',
+          'Metuchen','Metropark','Rahway','Linden','Elizabeth','North Elizabeth',
+          'Newark Liberty Airport','Newark Penn Station','Secaucus Junction','New York Penn Station']
+      },
+      'badge-coastal': {
+        name: 'North Jersey Coast Line', abbr: 'NJCL',
+        stations: ['Bay Head','Point Pleasant Beach','Manasquan','Spring Lake','Belmar',
+          'Bradley Beach','Asbury Park','Allenhurst','Elberon','Long Branch','Little Silver',
+          'Red Bank','Middletown','Hazlet','Aberdeen-Matawan','South Amboy','Perth Amboy',
+          'Woodbridge','Rahway','Newark Liberty Airport','Newark Penn Station',
+          'Secaucus Junction','New York Penn Station']
+      },
+      'badge-montclair': {
+        name: 'Montclair-Boonton Line', abbr: 'MCB',
+        stations: ['Hackettstown','Mount Olive','Netcong','Lake Hopatcong','Mount Arlington',
+          'Dover','Denville','Boonton','Towaco','Lincoln Park','Mountain View','Wayne-Route 23',
+          'Little Falls','Montclair State University','Montclair Heights','Mountain Avenue',
+          'Upper Montclair','Watchung Avenue','Walnut Street','Bay Street','Glen Ridge',
+          'Bloomfield','Watsessing Avenue','Newark Broad Street','Hoboken',
+          'Secaucus Junction','New York Penn Station']
+      },
+      'badge-morristown': {
+        name: 'Morris & Essex — Morristown Line', abbr: 'M&E',
+        stations: ['Dover','Denville','Mount Tabor','Morris Plains','Morristown',
+          'Convent Station','Madison','Chatham','Summit','Short Hills','Millburn',
+          'Maplewood','South Orange','Highland Avenue','Orange','Brick Church',
+          'East Orange','Newark Broad Street','Hoboken','Secaucus Junction','New York Penn Station']
+      },
+      'badge-gladstone': {
+        name: 'Morris & Essex — Gladstone Branch', abbr: 'GLAD',
+        stations: ['Gladstone','Peapack','Far Hills','Bernardsville','Basking Ridge',
+          'Lyons','Millington','Stirling','Gillette','Berkeley Heights','Murray Hill',
+          'New Providence','Summit','Short Hills','Millburn','Maplewood','South Orange',
+          'Highland Avenue','Orange','Brick Church','East Orange','Newark Broad Street',
+          'Hoboken','Secaucus Junction','New York Penn Station']
+      },
+      'badge-main': {
+        name: 'Main Line', abbr: 'MAIN',
+        stations: ['Suffern','Mahwah','Ramsey Route 17','Ramsey','Allendale','Waldwick',
+          'Ho-Ho-Kus','Ridgewood','Glen Rock Main Line','Hawthorne','Paterson','Clifton',
+          'Passaic','Delawanna','Lyndhurst','Secaucus Junction','Hoboken']
+      },
+      'badge-bergen': {
+        name: 'Bergen County Line', abbr: 'BERG',
+        stations: ['Montvale','Park Ridge','Woodcliff Lake','Hillsdale','Westwood',
+          'Emerson','Oradell','River Edge','New Bridge Landing','Bogota','Teterboro',
+          'Essex Street','Anderson Street','Secaucus Junction','Hoboken']
+      },
+      'badge-pascack': {
+        name: 'Pascack Valley Line', abbr: 'PVL',
+        stations: ['Spring Valley','Nanuet','Pearl River','Montvale','Park Ridge',
+          'Woodcliff Lake','Hillsdale','Westwood','Emerson','Oradell','River Edge',
+          'New Bridge Landing','Bogota','Teterboro','Essex Street','Anderson Street',
+          'Wood-Ridge','Secaucus Junction','Hoboken']
+      },
+      'badge-raritan': {
+        name: 'Raritan Valley Line', abbr: 'RVL',
+        stations: ['High Bridge','Annandale','Lebanon','White House','North Branch',
+          'Raritan','Somerville','Bridgewater','Bound Brook','Dunellen','Plainfield',
+          'Netherwood','Fanwood','Westfield','Cranford','Union','Roselle Park',
+          'Newark Broad Street','Newark Penn Station']
+      },
+      'badge-acl': {
+        name: 'Atlantic City Line', abbr: 'ACL',
+        stations: ['Atlantic City','Absecon','Egg Harbor City','Hammonton','Atco',
+          'Lindenwold','Cherry Hill','Pennsauken Transit Center','Philadelphia 30th Street']
+      },
+      'badge-princeton': {
+        name: 'Princeton Branch', abbr: 'PRIN',
+        stations: ['Princeton','Princeton Junction']
+      }
+    };
+
+    // Derive STATION_LINE_MAP from LINE_STATIONS
+    const STATION_LINE_MAP = (function() {
+      const map = {};
+      for (const [badgeKey, line] of Object.entries(LINE_STATIONS)) {
+        for (const station of line.stations) {
+          if (!map[station]) map[station] = [];
+          if (!map[station].includes(badgeKey)) map[station].push(badgeKey);
+        }
+      }
+      return map;
+    })();
+
+    const ALL_STATIONS = Object.keys(STATION_LINE_MAP).sort((a, b) => a.localeCompare(b));
+
+    const BADGE_ABBR = (function() {
+      const m = {};
+      for (const [k, v] of Object.entries(LINE_STATIONS)) m[k] = v.abbr;
+      return m;
+    })();
+
+    // ── Search State ──────────────────────────────────────────
+    let _fromVal = '';
+    let _toVal   = '';
+    let _activeDropdownTarget = null;
+
+    // ── Search Logic ──────────────────────────────────────────
+    function findMatchingLines(from, to) {
+      const fromLines = STATION_LINE_MAP[from] || [];
+      const toLines   = STATION_LINE_MAP[to]   || [];
+      return fromLines.filter(b => toLines.includes(b));
+    }
+
+    function generateTrainSchedule(from, to, badgeKey) {
+      const line = LINE_STATIONS[badgeKey];
+      const fromIdx = line.stations.indexOf(from);
+      const toIdx   = line.stations.indexOf(to);
+      const stopsInPath = Math.abs(toIdx - fromIdx);
+      const travelMinBase = Math.max(8, stopsInPath * 4 + 5);
+      const price = parseFloat((5 + Math.ceil(stopsInPath / 2) * 1.5).toFixed(2));
+
+      const now = new Date();
+      const isPeak = h => (h >= 6 && h < 9) || (h >= 16 && h < 19);
+
+      let t = new Date(now.getTime() + 3 * 60000);
+      t.setSeconds(0, 0);
+      const rem = t.getMinutes() % 5;
+      if (rem !== 0) t.setMinutes(t.getMinutes() + (5 - rem));
+
+      let seed = (fromIdx * 137 + toIdx * 31 + badgeKey.length * 17 + 1) | 0;
+      const rng = () => { seed = Math.imul(seed, 1664525) + 1013904223 | 0; return (seed >>> 0) / 0x100000000; };
+
+      const trains = [];
+      for (let i = 0; i < 5; i++) {
+        const h = t.getHours();
+        const isExpress = stopsInPath >= 6 && rng() < 0.4;
+        const travelMin = isExpress ? Math.round(travelMinBase * 0.78) : travelMinBase;
+        const displayStops = isExpress ? Math.max(3, Math.round(stopsInPath * 0.65)) : stopsInPath;
+        const delay = rng() < 0.18 ? Math.floor(rng() * 9) + 3 : 0;
+        trains.push({
+          dep: new Date(t),
+          arr: new Date(t.getTime() + travelMin * 60000),
+          travelMin, stopsInPath, displayStops, isExpress, delay,
+          track: Math.floor(rng() * 6) + 1,
+          trainNum: 3100 + Math.floor(rng() * 300),
+          price, fromIdx, toIdx
+        });
+        const gap = isPeak(h) ? Math.floor(rng() * 16) + 20 : Math.floor(rng() * 31) + 55;
+        t = new Date(t.getTime() + gap * 60000);
+      }
+      return trains;
+    }
+
+    function fmtTime(date) {
+      const h = date.getHours(), m = String(date.getMinutes()).padStart(2,'0');
+      return [`${h % 12 || 12}:${m}`, h >= 12 ? 'PM' : 'AM'];
+    }
+
+    function buildTrainCard(from, to, train, badgeKey, isRecommended) {
+      const line = LINE_STATIONS[badgeKey];
+      const [depStr, depAMPM] = fmtTime(train.dep);
+      const [arrStr, arrAMPM] = fmtTime(train.arr);
+
+      const asc = train.toIdx > train.fromIdx;
+      const pathStations = asc
+        ? line.stations.slice(train.fromIdx, train.toIdx + 1)
+        : [...line.stations.slice(train.toIdx, train.fromIdx + 1)].reverse();
+
+      let displayStations = pathStations;
+      if (train.isExpress && pathStations.length > 6) {
+        const mid = pathStations.slice(1, -1).filter((_, i) => i % 2 === 0);
+        displayStations = [pathStations[0], ...mid, pathStations[pathStations.length - 1]];
+      }
+
+      const miniStops = displayStations.map((s, i) => {
+        const prog = i / Math.max(1, displayStations.length - 1);
+        const st = new Date(train.dep.getTime() + Math.round(prog * train.travelMin) * 60000);
+        const [ts, ta] = fmtTime(st);
+        const isTerm = i === 0 || i === displayStations.length - 1;
+        return `<div class="mini-stop${isTerm ? ' terminal' : ''}">
+          <div class="mini-stop-col"><div class="mini-stop-dot"></div></div>
+          <span class="mini-stop-name">${s}</span>
+          <span class="mini-stop-time">${ts} ${ta}</span>
+        </div>`;
+      }).join('');
+
+      const statusChip = train.delay > 0
+        ? `<div class="chip chip-delayed"><span class="dot"></span> +${train.delay} min</div>`
+        : `<div class="chip chip-ontime"><span class="dot"></span> On Time</div>`;
+
+      const isDelayed = train.delay > 0;
+      const trackStyle = isDelayed ? ' style="background:var(--gold-100);"' : '';
+      const trackColor = isDelayed ? 'var(--gold-600)' : 'var(--green-800)';
+      const trackSVG = isDelayed
+        ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
+        : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M4 4h16M4 12h16M4 20h16M7 4v16M17 4v16"/></svg>`;
+      const trackText = `Track ${train.track} \u00b7 Train #${train.trainNum}${isDelayed ? ` \u00b7 Delayed +${train.delay} min` : ''}`;
+
+      const qs = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&dep=${encodeURIComponent(depStr+' '+depAMPM)}&arr=${encodeURIComponent(arrStr+' '+arrAMPM)}&dur=${train.travelMin}&stops=${train.displayStops}&line=${encodeURIComponent(line.name)}&badge=${badgeKey}&track=${train.track}&train=${train.trainNum}`;
+      const purchaseUrl = `purchase.html?${qs}`;
+      const tkSVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>`;
+
+      return `<div class="trip-result${isRecommended ? ' recommended relative' : ''}" onclick="toggleTrip(this)" data-line="${badgeKey}">
+        ${isRecommended ? '<div class="recommended-banner">\u2736 Recommended</div>' : ''}
+        <div class="trip-header">
+          <div class="trip-top-row">
+            <div class="flex items-center gap-2">
+              <span class="line-badge ${badgeKey}" style="font-size:10px;height:20px;padding:0 8px;">${line.abbr}</span>
+              <span style="font-size:13px;font-weight:600;color:var(--gray-700);">${line.name}</span>
+            </div>
+            <svg class="trip-expand-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="trip-times-row">
+            <div class="trip-time-col">
+              <p class="trip-time-big">${depStr}</p>
+              <p class="trip-time-ampm">${depAMPM}</p>
+              <p class="trip-time-label">Depart</p>
+            </div>
+            <div class="trip-divider-col">
+              <div class="trip-dash-line"></div>
+              <p class="trip-dur-label">${train.travelMin} min</p>
+            </div>
+            <div class="trip-time-col" style="text-align:right;">
+              <p class="trip-time-big">${arrStr}</p>
+              <p class="trip-time-ampm">${arrAMPM}</p>
+              <p class="trip-time-label">Arrive</p>
+            </div>
+          </div>
+          <div class="trip-meta-row">
+            <span class="trip-stops-label">${train.displayStops} stops \u00b7 ${train.isExpress ? 'Express' : 'Local'}</span>
+            ${statusChip}
+          </div>
+          <div class="trip-buy-row">
+            <span class="trip-buy-price">$${train.price.toFixed(2)}</span>
+            <a class="btn-buy-quick" href="${purchaseUrl}" onclick="event.stopPropagation()">
+              ${tkSVG} Buy Ticket
+            </a>
+          </div>
+        </div>
+        <div class="trip-body">
+          <div class="trip-body-inner">
+            <div class="trip-track-row"${trackStyle}>
+              ${trackSVG}
+              <span style="color:${trackColor};">${trackText}</span>
+            </div>
+            <div class="mini-stop-list">${miniStops}</div>
+            <a href="${purchaseUrl}" class="btn btn-primary w-full" style="margin-top:var(--sp-4);justify-content:center;" onclick="event.stopPropagation()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+              Purchase Ticket \u2014 $${train.price.toFixed(2)}
+            </a>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function renderSearchResults(from, to) {
+      const matchingLines = findMatchingLines(from, to);
+      const resultsList   = document.getElementById('results-list');
+      const filterRow     = document.getElementById('filter-row');
+      const countEl       = document.querySelector('.results-count');
+
+      if (matchingLines.length === 0) {
+        filterRow.innerHTML = '';
+        countEl.textContent = '0 trains found';
+        resultsList.innerHTML = `<div class="no-results">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <p class="no-results-title">No direct trains found</p>
+          <p class="no-results-body">${from} and ${to} are not on the same line.<br>Try connecting via <strong>Secaucus Junction</strong> or <strong>Newark Penn Station</strong>.</p>
+        </div>`;
+        return;
+      }
+
+      const allBtn = `<button class="filter-chip active" onclick="setLineFilter(this,null)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> All Lines</button>`;
+      filterRow.innerHTML = allBtn + matchingLines.map(b =>
+        `<button class="filter-chip" onclick="setLineFilter(this,'${b}')" data-line="${b}">${LINE_STATIONS[b].name}</button>`
+      ).join('');
+
+      const allTrains = [];
+      for (const badgeKey of matchingLines) {
+        generateTrainSchedule(from, to, badgeKey).forEach(t => allTrains.push({ train: t, badgeKey }));
+      }
+      allTrains.sort((a, b) => a.train.dep - b.train.dep);
+
+      countEl.textContent = `${allTrains.length} train${allTrains.length !== 1 ? 's' : ''} found`;
+
+      let html = '';
+      allTrains.forEach(({ train, badgeKey }, i) => {
+        if (i === 3) html += `<div class="section-divider"><span>Later trains</span></div>`;
+        html += buildTrainCard(from, to, train, badgeKey, i === 0);
+      });
+      resultsList.innerHTML = html;
+    }
+
+    function updateTripView() {
+      const hasBoth = _fromVal && _toVal;
+      document.getElementById('popular-section').style.display = hasBoth ? 'none' : '';
+      document.getElementById('results-section').style.display = hasBoth ? '' : 'none';
+      if (hasBoth) renderSearchResults(_fromVal, _toVal);
+    }
+
+    // ── Inline Dropdown ───────────────────────────────────────
+    function setDropdownTarget(target) {
+      _activeDropdownTarget = target;
+    }
+
+    function filterDropdown(query, target) {
+      _activeDropdownTarget = target;
+      if (!query.trim()) {
+        closeDropdown();
+        return;
+      }
+      const inputId = target === 'from' ? 'from-input' : 'to-input';
+      const input = document.getElementById(inputId);
+      const rect = input.getBoundingClientRect();
+      const dd = document.getElementById('station-dropdown');
+      dd.style.top = rect.bottom + 'px';
+      dd.style.left = rect.left + 'px';
+      dd.style.width = rect.width + 'px';
+      dd.style.display = 'block';
+      renderDropdown(query);
+    }
+
+    function renderDropdown(query) {
+      const dd = document.getElementById('station-dropdown');
+      const q = query.trim().toLowerCase();
+      const matches = ALL_STATIONS.filter(s => s.toLowerCase().includes(q)).slice(0, 20);
+      if (matches.length === 0) {
+        dd.innerHTML = `<p class="dropdown-empty">No stations match "${query}"</p>`;
+        return;
+      }
+      dd.innerHTML = matches.map(name => {
+        const lines = (STATION_LINE_MAP[name] || []).slice(0, 3);
+        const badges = lines.map(b =>
+          `<span class="line-badge ${b}" style="font-size:9px;height:16px;padding:0 6px;">${BADGE_ABBR[b] || b.replace('badge-','').toUpperCase()}</span>`
+        ).join('');
+        const safe = name.replace(/'/g, "\\'");
+        return `<div class="dropdown-result-row" onmousedown="event.preventDefault()" onclick="selectDropdownStation('${safe}')">
+          <span class="dropdown-station-name">${name}</span>
+          <div class="dropdown-badges">${badges}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function selectDropdownStation(name) {
+      const inputId = _activeDropdownTarget === 'from' ? 'from-input' : 'to-input';
+      document.getElementById(inputId).value = name;
+      if (_activeDropdownTarget === 'from') { _fromVal = name; }
+      else { _toVal = name; }
+      closeDropdown();
+      if (_activeDropdownTarget === 'from' && !_toVal) {
+        setTimeout(() => document.getElementById('to-input').focus(), 100);
+      } else if (_activeDropdownTarget === 'to' && !_fromVal) {
+        setTimeout(() => document.getElementById('from-input').focus(), 100);
+      } else {
+        updateTripView();
+      }
+    }
+
+    function scheduleCloseDropdown() {
+      setTimeout(() => {
+        const dd = document.getElementById('station-dropdown');
+        if (!dd.matches(':hover')) closeDropdown();
+      }, 150);
+    }
+
+    function closeDropdown() {
+      document.getElementById('station-dropdown').style.display = 'none';
+      _activeDropdownTarget = null;
+    }
+
+    function selectPopularRoute(from, to) {
+      document.getElementById('from-input').value = from;
+      document.getElementById('to-input').value = to;
+      _fromVal = from;
+      _toVal = to;
+      closeDropdown();
+      updateTripView();
+    }
+
+    // ── Swap, Toggle, Filter ──────────────────────────────────
+    function swapStations() {
+      const btn = document.getElementById('swap-btn');
+      btn.classList.add('spinning');
+      setTimeout(() => btn.classList.remove('spinning'), 300);
+      const fromInput = document.getElementById('from-input');
+      const toInput   = document.getElementById('to-input');
+      const tmp = fromInput.value;
+      fromInput.value = toInput.value;
+      toInput.value = tmp;
+      [_fromVal, _toVal] = [_toVal, _fromVal];
+      updateTripView();
+    }
+
+    function toggleTrip(card) {
+      const isOpen = card.classList.contains('expanded');
+      document.querySelectorAll('.trip-result.expanded').forEach(c => c.classList.remove('expanded'));
+      if (!isOpen) card.classList.add('expanded');
+    }
+
+    function setLineFilter(btn, line) {
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const cards = document.querySelectorAll('#results-list .trip-result');
+      const countEl = document.querySelector('.results-count');
+      let visible = 0;
+      cards.forEach(card => {
+        const show = !line || card.dataset.line === line;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      countEl.textContent = `${visible} train${visible !== 1 ? 's' : ''} found`;
+    }
+
+    // Init — read URL params for deep-linked routes (e.g. from home page saved routes)
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const pFrom = params.get('from'), pTo = params.get('to');
+      if (pFrom && pTo) {
+        document.getElementById('from-input').value = pFrom;
+        document.getElementById('to-input').value = pTo;
+        _fromVal = pFrom;
+        _toVal = pTo;
+      }
+    })();
+    updateTripView();
+  </script>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NJ Transit — Home</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .notif-btn {
+      width: 38px; height: 38px;
+      border-radius: var(--r-full);
+      background: rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: none;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .notif-btn:active { background: rgba(255,255,255,0.22); }
+    .notif-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gold-500);
+      position: absolute;
+      top: 7px; right: 7px;
+      border: 2px solid var(--green-900);
+    }
+    .next-train-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; opacity: 0.6; margin-bottom: 6px;
+    }
+    .next-train-route {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 26px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      line-height: 1; margin-bottom: 4px;
+    }
+    .next-train-sub {
+      font-size: 13px; opacity: 0.65; font-weight: 400;
+      margin-bottom: var(--sp-4);
+    }
+    .train-depart-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; opacity: 0.55; text-transform: uppercase; }
+    .train-depart-time {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 50px;
+      line-height: 1; letter-spacing: -1px; color: var(--white);
+    }
+    .train-depart-ampm { font-size: 18px; font-weight: 500; opacity: 0.7; }
+    .train-meta { display: flex; flex-direction: column; gap: 5px; margin-bottom: 2px; }
+    .train-track { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; opacity: 0.65; }
+    .separator-arrow {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: var(--sp-4); padding-top: var(--sp-4);
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    .progress-bar-wrap {
+      flex: 1; height: 4px; background: rgba(255,255,255,0.15);
+      border-radius: 2px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--gold-500);
+      border-radius: 2px; width: 22%; position: relative;
+    }
+    .progress-bar-fill::after {
+      content: ''; position: absolute;
+      right: 0; top: 50%; transform: translate(50%,-50%);
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--gold-400); box-shadow: 0 0 6px var(--gold-500);
+    }
+    .countdown-badge {
+      background: var(--gold-500); color: var(--gray-900);
+      border-radius: var(--r-full); padding: 4px 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800; font-size: 14px; letter-spacing: 0.3px; white-space: nowrap;
+    }
+    .saved-route-dest { font-weight: 700; font-size: 14px; color: var(--gray-900); line-height: 1.2; }
+    .saved-route-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+
+    /* Notification count badge on bell */
+    .notif-count-badge {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 16px; height: 16px; border-radius: 8px;
+      background: #d92b3a; color: #fff;
+      font-size: 9px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; border: 2px solid var(--green-900);
+      line-height: 1; box-sizing: border-box;
+    }
+
+    /* Notification panel — dropdown from bell icon */
+    #notif-backdrop {
+      display: none; position: fixed; inset: 0; z-index: 98;
+    }
+    #notif-backdrop.open { display: block; }
+    #notif-panel {
+      display: none; position: fixed; z-index: 100;
+      width: min(340px, calc(100vw - 20px));
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1);
+      max-height: 72vh; overflow-y: auto; overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    #notif-panel::-webkit-scrollbar { display: none; }
+    #notif-panel.open { display: block; }
+    .notif-panel-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 14px 12px;
+      background: linear-gradient(135deg, var(--green-900), var(--green-800));
+      border-radius: 16px 16px 0 0;
+      position: sticky; top: 0; z-index: 1;
+    }
+    .notif-close-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.12); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.15s;
+    }
+    .notif-close-btn:active { background: rgba(255,255,255,0.22); }
+    .notif-panel-hdr h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 18px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #fff; flex: 1;
+    }
+    .notif-mark-read {
+      font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.7);
+      background: none; border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 3px 9px; cursor: pointer;
+      font-family: 'DM Sans', sans-serif; flex-shrink: 0;
+    }
+    .notif-mark-read:active { background: rgba(255,255,255,0.1); }
+    .notif-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 20px; border-bottom: 1px solid var(--gray-100);
+      transition: background 0.15s;
+    }
+    .notif-item.unread { background: #f4fbf7; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-icon-wrap {
+      width: 32px; height: 32px; border-radius: var(--r-full);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .notif-icon-red    { background: #fdecea; }
+    .notif-icon-blue   { background: #e8f1fb; }
+    .notif-icon-green  { background: #e8f5ee; }
+    .notif-icon-gold   { background: #fff8e6; }
+    .notif-icon-purple { background: #f0ebfa; }
+    .notif-title { font-size: 13px; font-weight: 700; color: var(--gray-900); line-height: 1.3; }
+    .notif-body  { font-size: 12px; color: var(--gray-500); margin-top: 3px; line-height: 1.45; }
+    .notif-time  { font-size: 10px; font-weight: 600; color: var(--gray-400); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+
+    /* Widget status badge */
+    .widget-status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 22px; padding: 0 10px; border-radius: var(--r-full);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    .pill-activated { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .pill-saved     { background: rgba(240,165,0,0.15); color: var(--gold-500); border: 1px solid rgba(240,165,0,0.3); }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Green Header ──────────────────────── -->
+    <div class="page-header">
+      <!-- Status Bar -->
+      <div class="status-bar light" style="padding: 14px 0 0;">
+        <span class="time" id="status-time">9:41</span>
+        <div class="icons">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0" opacity="0.4"/><path d="M1.42 9a16 16 0 0 1 21.16 0" opacity="0.2"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="18" height="11" rx="2"/><path d="M22 11v3" stroke-linecap="round"/><rect x="4" y="9" width="12" height="7" rx="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <!-- Logo + Notification Row -->
+      <div class="flex items-center justify-between z-1" style="margin-top: var(--sp-4); margin-bottom: var(--sp-4);">
+        <div class="logo-area">
+          <img src="images_1/nj2.png" alt="NJ Transit" style="height:44px; display:block; object-fit:contain;">
+        </div>
+        <div class="relative">
+          <button class="notif-btn" onclick="toggleNotifPanel()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </button>
+          <span class="notif-count-badge" id="notif-badge">5</span>
+        </div>
+        <!-- Backdrop to close panel -->
+        <div id="notif-backdrop" onclick="closeNotifPanel()"></div>
+      </div>
+
+      <!-- Greeting -->
+      <div class="z-1" style="margin-bottom: var(--sp-4);">
+        <p style="font-size:12px; font-weight:500; opacity:0.5; letter-spacing:0.3px;" id="greeting-date">Saturday, March 28</p>
+        <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:30px; letter-spacing:0.5px; text-transform:uppercase; margin-top:1px;">Good morning, Alex</h1>
+      </div>
+
+      <!-- Next Train Hero Card -->
+      <div style="background:rgba(255,255,255,0.09); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.12); border-radius:var(--r-xl); padding:var(--sp-5); position:relative; z-index:1;">
+        <div class="flex items-center justify-between mb-3">
+          <p class="next-train-label">Next train</p>
+          <div id="widget-status-badge">
+            <!-- Populated by JS: shows Activated or Saved Route badge -->
+          </div>
+        </div>
+        <p class="next-train-route">Montclair Hts → Hoboken</p>
+        <p class="next-train-sub">Express · Train #3284</p>
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="train-depart-label">Departs</p>
+            <div class="flex items-end gap-2">
+              <span class="train-depart-time" id="depart-time">8:47</span>
+              <span class="train-depart-ampm">AM</span>
+            </div>
+          </div>
+          <div class="train-meta">
+            <div class="chip chip-ontime"><span class="dot"></span> On Time</div>
+            <div class="train-track">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16M4 12h16M4 20h16M7 4v16M17 4v16"/></svg>
+              Track 4
+            </div>
+          </div>
+        </div>
+        <div class="separator-arrow">
+          <span class="countdown-badge" id="countdown">In 8 min</span>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill"></div>
+          </div>
+          <span style="font-size:11px; opacity:0.5; font-weight:500; white-space:nowrap;">Arr 9:23 AM</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Scrollable Content ─────────────────── -->
+    <div class="page-content">
+      <div class="px-6 pt-5">
+
+        <!-- Search -->
+        <div class="search-bar mb-5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9e9e9e" stroke-width="2.5">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="Search stations or routes…">
+        </div>
+
+        <!-- Service Alert -->
+        <div class="alert-banner mb-5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c87d00" stroke-width="2.5" style="flex-shrink:0;">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <p style="font-size:12px; font-weight:700; color:var(--gold-600);">Service Advisory</p>
+            <p style="font-size:11px; color:var(--gray-700); margin-top:1px;">NEC delays 10–15 min due to track work at Penn Station.</p>
+          </div>
+        </div>
+
+        <!-- Saved Routes -->
+        <div class="mb-5">
+          <div class="section-hdr">
+            <h2 class="section-title">Saved Routes</h2>
+            <a href="trip.html" class="section-action">See all</a>
+          </div>
+          <div class="flex flex-col gap-3">
+
+            <a href="trip.html?from=Glen+Ridge&to=New+York+Penn+Station" class="route-row">
+              <div class="route-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="saved-route-dest">Glen Ridge → New York Penn</p>
+                <p class="saved-route-meta">Montclair-Boonton · ~44 min</p>
+              </div>
+              <div class="line-badge badge-montclair">MCB</div>
+            </a>
+
+            <a href="trip.html?from=Newark+Penn+Station&to=New+York+Penn+Station" class="route-row">
+              <div class="route-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="saved-route-dest">Newark Penn → New York Penn</p>
+                <p class="saved-route-meta">Northeast Corridor · ~26 min</p>
+              </div>
+              <div class="line-badge badge-ne">NEC</div>
+            </a>
+
+            <a href="trip.html?from=Hoboken&to=Secaucus+Junction" class="route-row">
+              <div class="route-icon-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="saved-route-dest">Hoboken → Secaucus Junction</p>
+                <p class="saved-route-meta">Main Line · ~8 min</p>
+              </div>
+              <div class="line-badge badge-main">MAIN</div>
+            </a>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Bottom Nav ─────────────────────────── -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="trip.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>Search</span>
+      </a>
+      <a href="tickets.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+        <span>Tickets</span>
+      </a>
+      <a href="map.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+        <span>Map</span>
+      </a>
+      <a href="account.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <!-- Notification panel (fixed, lives outside .app so it's not clipped) -->
+  <div id="notif-panel">
+    <div class="notif-panel-hdr">
+      <button class="notif-close-btn" onclick="closeNotifPanel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      </button>
+      <h3>Notifications</h3>
+      <button class="notif-mark-read" onclick="markAllRead()">Mark all read</button>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-icon-wrap notif-icon-red">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d92b3a" stroke-width="2.5"><path d="M15 5v2M15 11v2M15 17v2M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p class="notif-title">Ticket Expiring Soon</p>
+        <p class="notif-body">Your Newark Penn → New York Penn one-way ticket expires in 3 days. Activate or purchase a new one.</p>
+        <p class="notif-time">2 min ago</p>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-icon-wrap notif-icon-blue">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d6fb8" stroke-width="2.5"><path d="M4 4h16M4 12h16M4 20h16M7 4v16M17 4v16"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p class="notif-title">Track Change</p>
+        <p class="notif-body">Your 8:47 AM Montclair-Boonton train is now departing from Track 5 instead of Track 3.</p>
+        <p class="notif-time">15 min ago</p>
+      </div>
+    </div>
+    <div class="notif-item unread">
+      <div class="notif-icon-wrap notif-icon-green">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a5c38" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p class="notif-title">Purchase Confirmed</p>
+        <p class="notif-body">One-way ticket from Hoboken to Secaucus Junction purchased successfully. Have a great trip!</p>
+        <p class="notif-time">32 min ago</p>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-icon-wrap notif-icon-red">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d92b3a" stroke-width="2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p class="notif-title">Service Alert</p>
+        <p class="notif-body">Northeast Corridor experiencing 15 min delays due to signal problems near Elizabeth.</p>
+        <p class="notif-time">1 hr ago</p>
+      </div>
+    </div>
+    <div class="notif-item">
+      <div class="notif-icon-wrap notif-icon-purple">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div style="flex:1;">
+        <p class="notif-title">Trip Reminder</p>
+        <p class="notif-body">Your 5:15 PM train from New York Penn Station departs in 30 minutes. Head to the station now.</p>
+        <p class="notif-time">2 hrs ago</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0');
+      document.getElementById('status-time').textContent = `${h%12||12}:${m}`;
+      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('greeting-date').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+      let greet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      document.querySelector('h1').textContent = `${greet}, Alex`;
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const dep = new Date(now); dep.setMinutes(now.getMinutes() + 8, 0, 0);
+      const diff = Math.max(0, Math.floor((dep - now) / 60000));
+      const el = document.getElementById('countdown');
+      if (el) el.textContent = diff <= 0 ? 'Boarding' : `In ${diff} min`;
+      const dh = dep.getHours(), dm = String(dep.getMinutes()).padStart(2,'0');
+      document.getElementById('depart-time').textContent = `${dh%12||12}:${dm}`;
+    }
+
+    updateClock(); updateCountdown();
+    setInterval(updateClock, 30000); setInterval(updateCountdown, 30000);
+
+    // ── Widget status badge ───────────────────────────────────
+    (function() {
+      const DEMO_ACTIVE = { status: 'active' }; // demo ticket 1 is always active
+      const stored = JSON.parse(localStorage.getItem('njtransit_tickets') || '[]');
+      const hasActive = stored.some(t => t.status === 'active') || DEMO_ACTIVE.status === 'active';
+      const badge = document.getElementById('widget-status-badge');
+      if (hasActive) {
+        badge.innerHTML = `<div class="widget-status-pill pill-activated">
+          <svg width="7" height="7" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#22c55e"/></svg>
+          Activated
+        </div>`;
+      } else {
+        badge.innerHTML = `<div class="widget-status-pill pill-saved">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Saved Route
+        </div>`;
+      }
+    })();
+
+    // ── Notification panel ────────────────────────────────────
+    function toggleNotifPanel() {
+      const panel    = document.getElementById('notif-panel');
+      const backdrop = document.getElementById('notif-backdrop');
+      const isOpen   = panel.classList.contains('open');
+      if (isOpen) {
+        closeNotifPanel();
+      } else {
+        // Position dropdown below the bell button, aligned to right edge
+        const btn = document.querySelector('.notif-btn');
+        const rect = btn.getBoundingClientRect();
+        const panelWidth = Math.min(340, window.innerWidth - 20);
+        panel.style.top = (rect.bottom + 8) + 'px';
+        // Right-align panel to right edge of bell button
+        let right = window.innerWidth - rect.right;
+        right = Math.max(10, Math.min(right, window.innerWidth - panelWidth - 10));
+        panel.style.right = right + 'px';
+        panel.style.left = 'auto';
+        panel.classList.add('open');
+        backdrop.classList.add('open');
+      }
+    }
+
+    function closeNotifPanel() {
+      document.getElementById('notif-panel').classList.remove('open');
+      document.getElementById('notif-backdrop').classList.remove('open');
+    }
+
+    function markAllRead() {
+      document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+      const badge = document.getElementById('notif-badge');
+      if (badge) badge.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
