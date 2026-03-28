@@ -136,6 +136,7 @@ body {
 @media (max-width: 430px) {
   body { background: var(--cream-50); align-items: flex-start; }
   .app { width: 100%; border-radius: 0; box-shadow: none; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; }
 }
 
 /* ── Status Bar ─────────────────────────────────────────── */
@@ -179,7 +180,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .page-content::-webkit-scrollbar { display: none; }
@@ -192,9 +193,8 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: space-around;
-  padding: 10px 8px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 8px env(safe-area-inset-bottom, 0px);
   flex-shrink: 0;
-  position: relative;
   z-index: 100;
   box-shadow: 0 -1px 0 var(--gray-100), 0 -8px 24px rgba(0,0,0,0.06);
 }
@@ -748,7 +748,7 @@ body {
 .page-header {
   background: linear-gradient(160deg, var(--green-900) 0%, var(--green-800) 100%);
   color: var(--white);
-  padding: 0 var(--sp-6) var(--sp-8);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) var(--sp-6) var(--sp-8);
   border-radius: 0 0 var(--r-2xl) var(--r-2xl);
   position: relative;
   overflow: hidden;
@@ -1471,7 +1471,7 @@ body {
 .profile-hero {
   background: linear-gradient(160deg, var(--green-900) 0%, var(--green-800) 100%);
   color: var(--white);
-  padding: 0 var(--sp-6) var(--sp-8);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) var(--sp-6) var(--sp-8);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
