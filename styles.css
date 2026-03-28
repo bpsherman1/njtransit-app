@@ -179,14 +179,14 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-height) + 8px);
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 8px);
 }
 
 .page-content::-webkit-scrollbar { display: none; }
 
 /* ── Bottom Navigation ──────────────────────────────────── */
 .bottom-nav {
-  height: var(--nav-height);
+  min-height: var(--nav-height);
   background: var(--white);
   border-top: 1px solid var(--gray-100);
   display: flex;
@@ -1574,7 +1574,7 @@ body {
 /* FAB */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + 16px);
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;

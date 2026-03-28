@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a5c38">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>NJ Transit — Train Search</title>
   <link rel="stylesheet" href="styles.css">
   <style>
@@ -801,5 +805,6 @@
     })();
     updateTripView();
   </script>
+  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');</script>
 </body>
 </html>
