@@ -345,7 +345,8 @@
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app-shell">
+  <div class="page-content">
 
     <!-- ── Header ────────────────────────────── -->
     <div class="map-header">
@@ -411,7 +412,6 @@
     </div>
 
     <!-- ── Scrollable Route ───────────────────── -->
-    <div class="page-content">
       <div class="px-6 pt-5">
 
         <!-- Status card -->
@@ -606,8 +606,6 @@
     </div><!-- /page-content -->
 
 
-  </div>
-
   <!-- ── Bottom Nav ─────────────────────────── -->
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
@@ -631,6 +629,7 @@
       <span>Account</span>
     </a>
   </nav>
+  </div><!-- /.app-shell -->
 
   <script>
     (function() {
@@ -1041,11 +1040,5 @@
     renderRoute('montclair');
   </script>
   <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');</script>
-  <script>
-    window.addEventListener('load', function() {
-      window.scrollTo(0, 0);
-      setTimeout(function() { window.scrollTo(0, 0); }, 50);
-    });
-  </script>
 </body>
 </html>

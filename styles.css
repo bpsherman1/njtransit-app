@@ -83,8 +83,6 @@
   --shadow-lg: 0 10px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
   --shadow-xl: 0 20px 56px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
 
-  --nav-height: 64px;
-  --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
 /* ── Reset ──────────────────────────────────────────────── */
@@ -98,7 +96,14 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
-  background-color: white;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: white;
 }
 
 a { text-decoration: none; color: inherit; }
@@ -108,44 +113,15 @@ input, select { font-family: inherit; }
 /* ── App Shell ──────────────────────────────────────────── */
 body {
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: white;
-  min-height: 100dvh;
   overscroll-behavior-y: none;
   color: var(--gray-900);
 }
 
-.app {
-  width: 390px;
-  margin: 0 auto;
-  min-height: 100dvh;
-  height: 100dvh;
-  height: var(--app-height, 100dvh);
-  background: var(--cream-50);
-  position: relative;
+.app-shell {
   display: flex;
   flex-direction: column;
+  height: 100%;
   overflow: hidden;
-  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.04);
-  border-radius: var(--r-2xl);
-  animation: appIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes appIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to   { opacity: 1; transform: none; }
-}
-
-@media (max-width: 430px) {
-  html { background-color: #ffffff; }
-  body { background: var(--cream-50); align-items: flex-start; }
-  .app {
-    width: 100%;
-    border-radius: 0;
-    box-shadow: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    height: var(--app-height, 100dvh);
-  }
 }
 
 /* ── Status Bar ─────────────────────────────────────────── */
@@ -189,26 +165,19 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-height) + var(--safe-b) + 20px);
 }
 
 .page-content::-webkit-scrollbar { display: none; }
 
 /* ── Bottom Navigation ──────────────────────────────────── */
 .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: calc(var(--nav-height) + var(--safe-b));
-  padding-bottom: var(--safe-b);
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 0.5px solid var(--gray-100);
+  flex-shrink: 0;
+  background: white;
   display: flex;
+  justify-content: space-around;
   align-items: center;
-  z-index: 100;
+  padding: 8px 0;
+  border-top: 1px solid #E0DDD6;
 }
 
 .nav-item {

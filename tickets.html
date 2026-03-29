@@ -250,7 +250,8 @@
     </div>
   </div>
 
-  <div class="app">
+  <div class="app-shell">
+  <div class="page-content">
 
     <!-- ── Green Header ──────────────────────── -->
     <div class="page-header">
@@ -268,7 +269,6 @@
     </div>
 
     <!-- ── Scrollable Content ─────────────────── -->
-    <div class="page-content">
       <div class="px-6 pt-5">
 
         <!-- Active Tickets -->
@@ -340,9 +340,6 @@
       </div><!-- /px-6 -->
     </div><!-- /page-content -->
 
-
-  </div>
-
   <!-- ── Bottom Nav ─────────────────────────── -->
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
@@ -366,6 +363,7 @@
       <span>Account</span>
     </a>
   </nav>
+  </div><!-- /.app-shell -->
 
   <script>
     // Default demo tickets (shown when nothing in localStorage)
@@ -666,11 +664,5 @@
     });
   </script>
   <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');</script>
-  <script>
-    window.addEventListener('load', function() {
-      window.scrollTo(0, 0);
-      setTimeout(function() { window.scrollTo(0, 0); }, 50);
-    });
-  </script>
 </body>
 </html>
