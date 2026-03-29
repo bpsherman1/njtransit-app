@@ -109,9 +109,6 @@ input, select { font-family: inherit; }
 body {
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background: white;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
   min-height: 100dvh;
   overscroll-behavior-y: none;
   color: var(--gray-900);
@@ -119,6 +116,7 @@ body {
 
 .app {
   width: 390px;
+  margin: 0 auto;
   min-height: 100dvh;
   height: 100dvh;
   height: var(--app-height, 100dvh);
