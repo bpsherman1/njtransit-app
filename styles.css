@@ -83,6 +83,8 @@
   --shadow-lg: 0 10px 32px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.08);
   --shadow-xl: 0 20px 56px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
 
+  --nav-h: 56px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
 /* ── Reset ──────────────────────────────────────────────── */
@@ -96,13 +98,6 @@
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow: hidden;
   background: white;
 }
 
@@ -110,18 +105,19 @@ a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 input, select { font-family: inherit; }
 
-/* ── App Shell ──────────────────────────────────────────── */
+/* ── Base ───────────────────────────────────────────────── */
 body {
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cream-50);
+  min-height: 100dvh;
   overscroll-behavior-y: none;
   color: var(--gray-900);
+  -webkit-font-smoothing: antialiased;
 }
 
 .app-shell {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  max-width: 430px;
+  margin: 0 auto;
 }
 
 /* ── Status Bar ─────────────────────────────────────────── */
@@ -160,24 +156,22 @@ body {
 
 /* ── Scrollable Page Content ────────────────────────────── */
 .page-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 20px);
 }
-
-.page-content::-webkit-scrollbar { display: none; }
 
 /* ── Bottom Navigation ──────────────────────────────────── */
 .bottom-nav {
-  flex-shrink: 0;
-  background: white;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: calc(var(--nav-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 0.5px solid var(--gray-100);
   display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
-  padding: 0 0 max(env(safe-area-inset-bottom, 0px), 10px);
-  border-top: 1px solid #E0DDD6;
+  align-items: center;
+  z-index: 100;
 }
 
 .nav-item {
@@ -186,7 +180,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 4px 0;
+  padding: 6px 4px;
   border: none;
   background: transparent;
   text-decoration: none;
@@ -195,7 +189,7 @@ body {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: color .15s;
-  min-height: unset;
+  min-height: 44px;
 }
 
 .nav-item svg {
