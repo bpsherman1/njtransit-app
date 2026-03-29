@@ -100,7 +100,7 @@ html {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
-  background-color: #131a14;
+  background-color: white;
 }
 
 a { text-decoration: none; color: inherit; }
@@ -110,7 +110,7 @@ input, select { font-family: inherit; }
 /* ── App Shell ──────────────────────────────────────────── */
 body {
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #131a14;
+  background: white;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -194,7 +194,7 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--nav-height);
 }
 
 .page-content::-webkit-scrollbar { display: none; }
@@ -205,17 +205,15 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--white);
-  border-top: 1px solid var(--gray-100);
-  z-index: 100;
-  box-shadow: 0 -1px 0 var(--gray-100), 0 -8px 24px rgba(0,0,0,0.06);
-  padding-bottom: env(safe-area-inset-bottom);
+  background: white;
+  padding: 8px 0 0 0;
+  z-index: 9999;
 }
 
 .nav-buttons {
   display: flex;
   justify-content: space-around;
-  padding: 8px 0;
+  padding: 0;
 }
 
 
@@ -1600,7 +1598,7 @@ body {
 /* FAB */
 .fab {
   position: fixed;
-  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+  bottom: calc(var(--nav-height) + 16px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
