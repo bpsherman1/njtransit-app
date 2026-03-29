@@ -176,7 +176,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: flex-end;
-  padding: 0 0 10px;
+  padding: 0 0 max(env(safe-area-inset-bottom, 0px), 10px);
   border-top: 1px solid #E0DDD6;
 }
 
@@ -186,7 +186,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 0 4px;
+  padding: 6px 4px 0;
   border: none;
   background: transparent;
   text-decoration: none;
