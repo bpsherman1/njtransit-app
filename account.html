@@ -335,5 +335,11 @@
   </nav>
 
   <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');</script>
+  <script>
+    window.addEventListener('load', function() {
+      window.scrollTo(0, 0);
+      setTimeout(function() { window.scrollTo(0, 0); }, 50);
+    });
+  </script>
 </body>
 </html>

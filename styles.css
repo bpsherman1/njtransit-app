@@ -129,7 +129,7 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,0.04);
   border-radius: var(--r-2xl);
-  animation: appIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: appIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes appIn {
