@@ -11,300 +11,324 @@
   <title>NJ Transit — Account</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .member-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: var(--r-full);
-      padding: 4px 12px;
-      font-size: 11px; font-weight: 700;
-      letter-spacing: 0.5px; color: rgba(255,255,255,0.85);
-    }
-    .member-badge .star { color: var(--gold-400); }
-
-    .section-card {
+    /* ── Profile card ──────────────────────────── */
+    .profile-card {
       background: var(--white);
       border-radius: var(--r-lg);
-      padding: 0 var(--sp-4);
+      padding: var(--sp-6) var(--sp-4);
+      text-align: center;
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--gray-100);
+      margin-bottom: var(--sp-4);
+    }
+    .profile-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--green-800);
+      color: white;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 26px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto var(--sp-3);
+      letter-spacing: 1px;
+    }
+    .profile-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 22px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--gray-900); line-height: 1.1;
+    }
+    .profile-email {
+      font-size: 13px; color: var(--gray-500);
+      margin-top: 3px;
+    }
+    .profile-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--gold-100);
+      border: 1px solid rgba(240,165,0,0.25);
+      border-radius: var(--r-full);
+      padding: 3px 10px;
+      font-size: 11px; font-weight: 700;
+      color: var(--gold-600);
+      margin-top: var(--sp-3);
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Stats row ─────────────────────────────── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: var(--sp-5);
+    }
+    .stat-box {
+      background: var(--white);
+      border-radius: var(--r-md);
+      padding: var(--sp-4) var(--sp-2);
+      text-align: center;
       box-shadow: var(--shadow-xs);
       border: 1px solid var(--gray-100);
     }
-
-    .stat-strip {
-      display: grid; grid-template-columns: repeat(3,1fr);
-      gap: 1px; background: var(--gray-100);
-      border-radius: var(--r-lg);
-      overflow: hidden;
-      box-shadow: var(--shadow-xs);
-      margin-bottom: var(--sp-5);
-    }
-    .stat-cell {
-      background: var(--white);
-      padding: var(--sp-4) var(--sp-2);
-      text-align: center;
-    }
     .stat-num {
       font-family: 'Barlow Condensed', sans-serif;
-      font-weight: 900; font-size: 26px;
+      font-weight: 900; font-size: 28px;
       color: var(--green-800); line-height: 1;
     }
-    .stat-lbl { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-top: 3px; letter-spacing: 0.2px; }
+    .stat-lbl {
+      font-size: 10px; font-weight: 600;
+      color: var(--gray-400); margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
 
-    .danger-zone { padding: var(--sp-4) 0; }
+    /* ── Section label ─────────────────────────── */
+    .settings-section-label {
+      font-size: 11px; font-weight: 700;
+      color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 0 4px;
+      margin-bottom: var(--sp-2);
+      margin-top: var(--sp-5);
+    }
+
+    /* ── Settings card ─────────────────────────── */
+    .settings-card {
+      background: var(--white);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-xs);
+      border: 1px solid var(--gray-100);
+      overflow: hidden;
+      margin-bottom: 0;
+    }
+    .settings-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      text-decoration: none; color: inherit;
+      transition: background 0.12s;
+      cursor: pointer;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row:active { background: var(--gray-50); }
+
+    .row-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .row-icon svg { width: 17px; height: 17px; }
+
+    .row-label {
+      flex: 1;
+      font-size: 14px; font-weight: 500;
+      color: var(--gray-900);
+    }
+    .row-value {
+      font-size: 13px; color: var(--gray-400); font-weight: 500;
+      margin-right: 4px;
+    }
+    .row-chevron {
+      width: 16px; height: 16px; flex-shrink: 0;
+      color: var(--gray-300);
+    }
+
+    /* ── Log out row ───────────────────────────── */
+    .row-logout {
+      display: flex; align-items: center;
+      padding: 14px 16px;
+      cursor: pointer; transition: background 0.12s;
+      border: none; background: none;
+      width: 100%; font-family: inherit;
+    }
+    .row-logout:active { background: #fdecea; }
+    .row-logout-label {
+      font-size: 14px; font-weight: 600;
+      color: #d92b3a;
+    }
+
+    .version-text {
+      text-align: center;
+      font-size: 11px; color: var(--gray-300);
+      font-weight: 500;
+      margin-top: var(--sp-6);
+    }
   </style>
 </head>
 <body>
   <div class="app-shell">
   <div class="page-content">
 
-    <!-- ── Profile Hero ───────────────────────── -->
-    <div class="profile-hero">
-
-      <div class="flex items-center gap-4 z-1" style="margin-top:var(--sp-5); margin-bottom:var(--sp-5);">
-        <div class="avatar-lg" style="position:relative;">
-          AL
-          <div class="avatar-edit-btn">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--green-800)" stroke-width="2.5">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-          </div>
-        </div>
-        <div class="flex-1">
-          <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:26px; text-transform:uppercase; letter-spacing:0.5px; line-height:1;">Alex Larson</h1>
-          <p style="font-size:13px; opacity:0.6; margin-top:3px;">alex.larson@email.com</p>
-          <div class="member-badge" style="margin-top:8px;">
-            <span class="star">★</span> Gold Member · Since 2021
-          </div>
-        </div>
+    <!-- ── Green Header ──────────────────────── -->
+    <div class="page-header">
+      <div class="z-1" style="margin-top:var(--sp-5); margin-bottom:var(--sp-5);">
+        <p style="font-size:11px; font-weight:600; opacity:0.5; letter-spacing:1px; text-transform:uppercase;">Settings</p>
+        <h1 style="font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:34px; letter-spacing:0.5px; text-transform:uppercase; line-height:1; margin-top:2px;">Account</h1>
       </div>
     </div>
 
     <!-- ── Content ────────────────────────────── -->
-      <div class="px-6 pt-5">
+    <div class="px-6 pt-5">
 
-        <!-- Stats strip -->
-        <div class="stat-strip">
-          <div class="stat-cell">
-            <p class="stat-num">147</p>
-            <p class="stat-lbl">Trips</p>
-          </div>
-          <div class="stat-cell">
-            <p class="stat-num">4</p>
-            <p class="stat-lbl">Active</p>
-          </div>
-          <div class="stat-cell">
-            <p class="stat-num">2.3k</p>
-            <p class="stat-lbl">Miles</p>
-          </div>
+      <!-- Profile card -->
+      <div class="profile-card">
+        <div class="profile-avatar">AL</div>
+        <p class="profile-name">Alex Larson</p>
+        <p class="profile-email">alex.larson@email.com</p>
+        <div class="profile-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Gold Member · Since 2021
         </div>
-
-        <!-- Payment Methods -->
-        <div class="section-hdr mb-3">
-          <h2 class="section-title">Payment Methods</h2>
-          <button onclick="" style="font-size:13px; font-weight:600; color:var(--green-800); background:none; border:none; cursor:pointer;">+ Add</button>
-        </div>
-        <div class="section-card mb-5">
-          <div class="payment-card-row">
-            <div class="card-brand brand-visa">VISA</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Visa ending in 4242</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Expires 09/27 · Default</p>
-            </div>
-            <div class="chip chip-ontime" style="font-size:10px;"><span class="dot"></span> Default</div>
-          </div>
-          <div class="payment-card-row">
-            <div class="card-brand brand-mc" style="font-size:10px;">MC</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Mastercard ending in 8891</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Expires 03/26</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        </div>
-
-        <!-- Connected Apps -->
-        <div class="section-hdr mb-3">
-          <h2 class="section-title">Connected Apps</h2>
-        </div>
-        <div class="section-card mb-5">
-          <div class="connected-app-row">
-            <div class="app-icon">🍎</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Apple Wallet</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Tickets sync automatically</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" checked onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="connected-app-row">
-            <div class="app-icon">🤖</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Google Pay</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Tap to pay at turnstiles</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="connected-app-row">
-            <div class="app-icon">🗺️</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Google Maps</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Show NJ Transit in directions</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" checked onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Notifications -->
-        <div class="section-hdr mb-3">
-          <h2 class="section-title">Notifications</h2>
-        </div>
-        <div class="section-card mb-5">
-          <div class="connected-app-row">
-            <div class="settings-icon" style="background:var(--green-100);">🔔</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Train Alerts</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Delays, cancellations, platform changes</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" checked onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="connected-app-row">
-            <div class="settings-icon" style="background:var(--gold-100);">⚠️</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Service Disruptions</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Major service changes and advisories</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" checked onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="connected-app-row">
-            <div class="settings-icon" style="background:var(--cream-100);">🎫</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Ticket Reminders</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">15 min before departure</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" checked onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-          <div class="connected-app-row">
-            <div class="settings-icon" style="background:var(--cream-100);">🏷️</div>
-            <div class="flex-1">
-              <p style="font-size:14px; font-weight:600; color:var(--gray-900);">Promotions & Offers</p>
-              <p style="font-size:12px; color:var(--gray-500); margin-top:1px;">Deals on passes and tickets</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Account & Settings -->
-        <div class="section-hdr mb-3">
-          <h2 class="section-title">Account & Settings</h2>
-        </div>
-        <div class="section-card mb-5">
-          <a href="#" class="settings-row">
-            <div class="settings-icon" style="background:var(--cream-100);">🕐</div>
-            <div class="settings-text">
-              <p class="settings-title">Trip History</p>
-              <p class="settings-sub">View all past journeys</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="#" class="settings-row">
-            <div class="settings-icon" style="background:var(--cream-100);">🌐</div>
-            <div class="settings-text">
-              <p class="settings-title">Language</p>
-              <p class="settings-sub">English (US)</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <div class="settings-row">
-            <div class="settings-icon" style="background:var(--cream-100);">♿</div>
-            <div class="settings-text">
-              <p class="settings-title">Accessibility</p>
-              <p class="settings-sub">Larger text, high contrast</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <div class="settings-row">
-            <div class="settings-icon" style="background:var(--gray-800);">🌙</div>
-            <div class="settings-text">
-              <p class="settings-title">Dark Mode</p>
-              <p class="settings-sub">Use device setting</p>
-            </div>
-            <label class="toggle-wrap">
-              <input type="checkbox" id="dark-toggle" onchange="void(0)">
-              <span class="toggle-track"></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Help & Support -->
-        <div class="section-hdr mb-3">
-          <h2 class="section-title">Support</h2>
-        </div>
-        <div class="section-card mb-5">
-          <a href="#" class="settings-row">
-            <div class="settings-icon" style="background:#e8f0fe;">💬</div>
-            <div class="settings-text">
-              <p class="settings-title">Help Center</p>
-              <p class="settings-sub">FAQs and guides</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="#" class="settings-row">
-            <div class="settings-icon" style="background:#fce8f3;">📞</div>
-            <div class="settings-text">
-              <p class="settings-title">Contact Support</p>
-              <p class="settings-sub">Mon–Fri, 6am–10pm</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-          <a href="#" class="settings-row" style="border-bottom:none;">
-            <div class="settings-icon" style="background:var(--gold-100);">⭐</div>
-            <div class="settings-text">
-              <p class="settings-title">Rate the App</p>
-              <p class="settings-sub">Leave a review on the App Store</p>
-            </div>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-300)" stroke-width="2.5" class="settings-chevron"><polyline points="9 18 15 12 9 6"/></svg>
-          </a>
-        </div>
-
-        <!-- App version -->
-        <p style="text-align:center; font-size:11px; color:var(--gray-300); font-weight:500; margin-bottom:var(--sp-4);">NJ Transit App · Version 3.2.1</p>
-
-        <!-- Sign Out -->
-        <div class="danger-zone mb-4">
-          <button class="signout-btn" onclick="if(confirm('Sign out of your account?')) window.location.href='index.html'">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Sign Out
-          </button>
-        </div>
-
       </div>
-    </div>
 
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-box">
+          <p class="stat-num">47</p>
+          <p class="stat-lbl">Trips</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-num">2</p>
+          <p class="stat-lbl">Active</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-num" style="font-size:22px;">1,284</p>
+          <p class="stat-lbl">Miles</p>
+        </div>
+      </div>
+
+      <!-- Section: Account -->
+      <p class="settings-section-label" style="margin-top:0;">Account</p>
+      <div class="settings-card">
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#eef2ff;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#4f6ef7" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <span class="row-label">Edit Profile</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#e8f5ee;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--green-700)" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <span class="row-label">Wallet &amp; Payment</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#fff8e6;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <span class="row-label">Notification Preferences</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+
+      <!-- Section: App -->
+      <p class="settings-section-label">App</p>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="row-icon" style="background:#f0ebfa;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </div>
+          <span class="row-label">Theme Mode</span>
+          <span class="row-value">Auto</span>
+        </div>
+        <div class="settings-row">
+          <div class="row-icon" style="background:#e8f1fb;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1d6fb8" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+          </div>
+          <span class="row-label">Video Quality</span>
+          <span class="row-value">Auto</span>
+        </div>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#fff8e6;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <span class="row-label">Material Library</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:var(--gray-50);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-500)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <span class="row-label">Sensitive Content</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+
+      <!-- Section: Activity -->
+      <p class="settings-section-label">Activity</p>
+      <div class="settings-card">
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:var(--cream-100);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-600)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <span class="row-label">Trip History</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#fff8e6;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <span class="row-label">Favorites</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#e8f1fb;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1d6fb8" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <span class="row-label">Downloads</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+
+      <!-- Section: Support -->
+      <p class="settings-section-label">Support</p>
+      <div class="settings-card">
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#e8f1fb;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1d6fb8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <span class="row-label">Help Center</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:#fdecea;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#d92b3a" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <span class="row-label">Report a Problem</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:var(--gray-50);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-500)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <span class="row-label">Terms of Service</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+        <a href="#" class="settings-row">
+          <div class="row-icon" style="background:var(--gray-50);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-500)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <span class="row-label">Privacy Policy</span>
+          <svg class="row-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </a>
+      </div>
+
+      <!-- Section: Danger Zone -->
+      <p class="settings-section-label">Danger Zone</p>
+      <div class="settings-card">
+        <button class="row-logout" onclick="if(confirm('Sign out of your account?')) window.location.href='index.html'">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d92b3a" stroke-width="2" style="margin-right:12px; flex-shrink:0;">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span class="row-logout-label">Log Out</span>
+        </button>
+      </div>
+
+      <p class="version-text">NJ Transit App · Version 3.2.1</p>
+
+    </div>
+  </div><!-- /.page-content -->
   </div><!-- /.app-shell -->
 
   <!-- ── Bottom Nav ─────────────────────────── -->

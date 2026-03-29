@@ -156,7 +156,7 @@ body {
 
 /* ── Scrollable Page Content ────────────────────────────── */
 .page-content {
-  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 20px);
+  padding-bottom: calc(var(--nav-h) + var(--safe-b) + 40px);
 }
 
 /* ── Bottom Navigation ──────────────────────────────────── */
